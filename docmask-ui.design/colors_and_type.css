@@ -1,0 +1,67 @@
+/* DocMask UI — Design Tokens */
+:root {
+  /* Brand */
+  --brand-primary: #168AAD;
+  --brand-primary-hover: #11728F;
+  --brand-primary-foreground: #FFFFFF;
+
+  /* Surface */
+  --brand-background: #F4F7FA;
+  --brand-foreground: #172033;
+  --brand-muted: #667085;
+  --brand-muted-foreground: #9CA3AF;
+  --brand-card: #FFFFFF;
+  --brand-card-foreground: #172033;
+  --brand-popover: #FFFFFF;
+  --brand-popover-foreground: #172033;
+  --brand-border: #DCE3EA;
+  --brand-input: #DCE3EA;
+  --brand-ring: #168AAD;
+
+  /* Sidebar */
+  --brand-sidebar-bg: #0F1B2D;
+  --brand-sidebar-fg: #DCE3EA;
+  --brand-sidebar-active-bg: rgba(22, 138, 173, 0.15);
+  --brand-sidebar-active-fg: #168AAD;
+
+  /* States */
+  --brand-state-success: #168A5B;
+  --brand-state-warning: #D68B16;
+  --brand-state-error: #D94A4A;
+  --brand-state-info: #3B82C4;
+
+  /* Radius */
+  --brand-radius-sm: 4px;
+  --brand-radius-md: 8px;
+  --brand-radius-lg: 12px;
+  --brand-radius-pill: 999px;
+
+  /* Shadows */
+  --brand-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --brand-shadow-2: 0 8px 24px -8px rgba(15, 23, 42, 0.18);
+  --brand-shadow-3: 0 24px 60px -20px rgba(15, 23, 42, 0.30);
+
+  /* Spacing */
+  --brand-s-1: 4px;
+  --brand-s-2: 8px;
+  --brand-s-3: 12px;
+  --brand-s-4: 16px;
+  --brand-s-5: 24px;
+  --brand-s-6: 32px;
+  --brand-s-7: 48px;
+  --brand-s-8: 80px;
+
+  /* Typography */
+  --brand-font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  --brand-font-mono: "Cascadia Code", "Fira Code", "Consolas", monospace;
+}
+
+/* Secondary / Accent aliases — map to primary for free-explore compliance */
+:root {
+  --brand-secondary: var(--brand-background);
+  --brand-secondary-foreground: var(--brand-foreground);
+  --brand-accent: var(--brand-primary);
+  --brand-accent-foreground: var(--brand-primary-foreground);
+  --brand-destructive: var(--brand-state-error);
+  --brand-destructive-foreground: #FFFFFF;
+}

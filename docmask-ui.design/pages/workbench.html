@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作台</title>
+    <style id="theme-vars">
+/* DocMask UI — Design Tokens */
+:root {
+  /* Brand */
+  --brand-primary: #168AAD;
+  --brand-primary-hover: #11728F;
+  --brand-primary-foreground: #FFFFFF;
+
+  /* Surface */
+  --brand-background: #F4F7FA;
+  --brand-foreground: #172033;
+  --brand-muted: #667085;
+  --brand-muted-foreground: #9CA3AF;
+  --brand-card: #FFFFFF;
+  --brand-card-foreground: #172033;
+  --brand-popover: #FFFFFF;
+  --brand-popover-foreground: #172033;
+  --brand-border: #DCE3EA;
+  --brand-input: #DCE3EA;
+  --brand-ring: #168AAD;
+
+  /* Sidebar */
+  --brand-sidebar-bg: #0F1B2D;
+  --brand-sidebar-fg: #DCE3EA;
+  --brand-sidebar-active-bg: rgba(22, 138, 173, 0.15);
+  --brand-sidebar-active-fg: #168AAD;
+
+  /* States */
+  --brand-state-success: #168A5B;
+  --brand-state-warning: #D68B16;
+  --brand-state-error: #D94A4A;
+  --brand-state-info: #3B82C4;
+
+  /* Radius */
+  --brand-radius-sm: 4px;
+  --brand-radius-md: 8px;
+  --brand-radius-lg: 12px;
+  --brand-radius-pill: 999px;
+
+  /* Shadows */
+  --brand-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --brand-shadow-2: 0 8px 24px -8px rgba(15, 23, 42, 0.18);
+  --brand-shadow-3: 0 24px 60px -20px rgba(15, 23, 42, 0.30);
+
+  /* Spacing */
+  --brand-s-1: 4px;
+  --brand-s-2: 8px;
+  --brand-s-3: 12px;
+  --brand-s-4: 16px;
+  --brand-s-5: 24px;
+  --brand-s-6: 32px;
+  --brand-s-7: 48px;
+  --brand-s-8: 80px;
+
+  /* Typography */
+  --brand-font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  --brand-font-mono: "Cascadia Code", "Fira Code", "Consolas", monospace;
+}
+
+/* Secondary / Accent aliases — map to primary for free-explore compliance */
+:root {
+  --brand-secondary: var(--brand-background);
+  --brand-secondary-foreground: var(--brand-foreground);
+  --brand-accent: var(--brand-primary);
+  --brand-accent-foreground: var(--brand-primary-foreground);
+  --brand-destructive: var(--brand-state-error);
+  --brand-destructive-foreground: #FFFFFF;
+}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--brand-background);
+    --color-foreground: var(--brand-foreground);
+    --color-card: var(--brand-card);
+    --color-card-foreground: var(--brand-card-foreground);
+    --color-popover: var(--brand-popover);
+    --color-popover-foreground: var(--brand-popover-foreground);
+    --color-primary: var(--brand-primary);
+    --color-primary-foreground: var(--brand-primary-foreground);
+    --color-secondary: var(--brand-secondary);
+    --color-secondary-foreground: var(--brand-secondary-foreground);
+    --color-muted: var(--brand-muted);
+    --color-muted-foreground: var(--brand-muted-foreground);
+    --color-accent: var(--brand-accent);
+    --color-accent-foreground: var(--brand-accent-foreground);
+    --color-destructive: var(--brand-destructive);
+    --color-destructive-foreground: var(--brand-destructive-foreground);
+    --color-border: var(--brand-border);
+    --color-input: var(--brand-input);
+    --color-ring: var(--brand-ring);
+    --radius-sm: var(--brand-radius-sm);
+    --radius-md: var(--brand-radius-md);
+    --radius-lg: var(--brand-radius-lg);
+  }
+  @layer base {
+    body { background: var(--brand-background); color: var(--brand-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--brand-background); }
+      .text-background { color: var(--brand-background); }
+      .border-background { border-color: var(--brand-background); }
+      .ring-background { --tw-ring-color: var(--brand-background); }
+      .bg-foreground { background-color: var(--brand-foreground); }
+      .text-foreground { color: var(--brand-foreground); }
+      .border-foreground { border-color: var(--brand-foreground); }
+      .ring-foreground { --tw-ring-color: var(--brand-foreground); }
+      .bg-card { background-color: var(--brand-card); }
+      .text-card { color: var(--brand-card); }
+      .border-card { border-color: var(--brand-card); }
+      .ring-card { --tw-ring-color: var(--brand-card); }
+      .bg-card-foreground { background-color: var(--brand-card-foreground); }
+      .text-card-foreground { color: var(--brand-card-foreground); }
+      .border-card-foreground { border-color: var(--brand-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--brand-card-foreground); }
+      .bg-popover { background-color: var(--brand-popover); }
+      .text-popover { color: var(--brand-popover); }
+      .border-popover { border-color: var(--brand-popover); }
+      .ring-popover { --tw-ring-color: var(--brand-popover); }
+      .bg-popover-foreground { background-color: var(--brand-popover-foreground); }
+      .text-popover-foreground { color: var(--brand-popover-foreground); }
+      .border-popover-foreground { border-color: var(--brand-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--brand-popover-foreground); }
+      .bg-primary { background-color: var(--brand-primary); }
+      .text-primary { color: var(--brand-primary); }
+      .border-primary { border-color: var(--brand-primary); }
+      .ring-primary { --tw-ring-color: var(--brand-primary); }
+      .bg-primary-foreground { background-color: var(--brand-primary-foreground); }
+      .text-primary-foreground { color: var(--brand-primary-foreground); }
+      .border-primary-foreground { border-color: var(--brand-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--brand-primary-foreground); }
+      .bg-secondary { background-color: var(--brand-secondary); }
+      .text-secondary { color: var(--brand-secondary); }
+      .border-secondary { border-color: var(--brand-secondary); }
+      .ring-secondary { --tw-ring-color: var(--brand-secondary); }
+      .bg-secondary-foreground { background-color: var(--brand-secondary-foreground); }
+      .text-secondary-foreground { color: var(--brand-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--brand-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--brand-secondary-foreground); }
+      .bg-muted { background-color: var(--brand-muted); }
+      .text-muted { color: var(--brand-muted); }
+      .border-muted { border-color: var(--brand-muted); }
+      .ring-muted { --tw-ring-color: var(--brand-muted); }
+      .bg-muted-foreground { background-color: var(--brand-muted-foreground); }
+      .text-muted-foreground { color: var(--brand-muted-foreground); }
+      .border-muted-foreground { border-color: var(--brand-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--brand-muted-foreground); }
+      .bg-accent { background-color: var(--brand-accent); }
+      .text-accent { color: var(--brand-accent); }
+      .border-accent { border-color: var(--brand-accent); }
+      .ring-accent { --tw-ring-color: var(--brand-accent); }
+      .bg-accent-foreground { background-color: var(--brand-accent-foreground); }
+      .text-accent-foreground { color: var(--brand-accent-foreground); }
+      .border-accent-foreground { border-color: var(--brand-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--brand-accent-foreground); }
+      .bg-destructive { background-color: var(--brand-destructive); }
+      .text-destructive { color: var(--brand-destructive); }
+      .border-destructive { border-color: var(--brand-destructive); }
+      .ring-destructive { --tw-ring-color: var(--brand-destructive); }
+      .bg-destructive-foreground { background-color: var(--brand-destructive-foreground); }
+      .text-destructive-foreground { color: var(--brand-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--brand-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--brand-destructive-foreground); }
+      .bg-border { background-color: var(--brand-border); }
+      .text-border { color: var(--brand-border); }
+      .border-border { border-color: var(--brand-border); }
+      .ring-border { --tw-ring-color: var(--brand-border); }
+      .bg-input { background-color: var(--brand-input); }
+      .text-input { color: var(--brand-input); }
+      .border-input { border-color: var(--brand-input); }
+      .ring-input { --tw-ring-color: var(--brand-input); }
+      .bg-ring { background-color: var(--brand-ring); }
+      .text-ring { color: var(--brand-ring); }
+      .border-ring { border-color: var(--brand-ring); }
+      .ring-ring { --tw-ring-color: var(--brand-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <style id="critical-layout">
+      html, body { height: 100%; overflow: hidden; }
+      .app-shell { display: flex; height: 100vh; width: 100%; }
+      .app-main { flex: 1; overflow-y: auto; overflow-x: hidden; }
+      .app-sidebar { flex-shrink: 0; }
+      .card { background: var(--brand-card); border-radius: var(--brand-radius-lg); box-shadow: var(--brand-shadow-1); border: 1px solid var(--brand-border); }
+      .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 42px; padding: 0 24px; border-radius: var(--brand-radius-md); background: var(--brand-primary); color: #FFFFFF; font-size: 14px; font-weight: 500; border: none; cursor: pointer; transition: background 0.15s; }
+      .btn-primary:hover { background: var(--brand-primary-hover); }
+      .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: var(--brand-radius-md); background: var(--brand-card); color: var(--brand-foreground); font-size: 13px; font-weight: 500; border: 1px solid var(--brand-border); cursor: pointer; transition: all 0.15s; }
+      .btn-secondary:hover { background: var(--brand-background); }
+      .btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 36px; padding: 0 12px; border-radius: var(--brand-radius-md); background: transparent; color: var(--brand-muted); font-size: 13px; border: none; cursor: pointer; transition: all 0.15s; }
+      .btn-ghost:hover { background: rgba(0,0,0,0.04); color: var(--brand-foreground); }
+      .btn-danger { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 36px; padding: 0 16px; border-radius: var(--brand-radius-md); background: transparent; color: var(--brand-state-error); font-size: 13px; border: 1px solid transparent; cursor: pointer; transition: all 0.15s; }
+      .btn-danger:hover { background: rgba(217,74,74,0.08); border-color: rgba(217,74,74,0.2); }
+      .btn-link { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--brand-primary); font-size: 13px; cursor: pointer; padding: 0; transition: color 0.15s; }
+      .btn-link:hover { color: var(--brand-primary-hover); }
+      .input-field { height: 40px; padding: 0 12px; border-radius: var(--brand-radius-md); border: 1px solid var(--brand-border); background: var(--brand-card); color: var(--brand-foreground); font-size: 14px; font-family: var(--brand-font-family); width: 100%; box-sizing: border-box; transition: border-color 0.15s; }
+      .input-field:focus { outline: none; border-color: var(--brand-ring); box-shadow: 0 0 0 2px rgba(22,138,173,0.15); }
+      .input-field::placeholder { color: var(--brand-muted-foreground); }
+      .radio-group { display: flex; flex-direction: column; gap: 10px; }
+      .radio-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--brand-foreground); }
+      .radio-item input[type="radio"] { accent-color: var(--brand-primary); width: 16px; height: 16px; margin: 0; }
+      .checkbox-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--brand-foreground); }
+      .checkbox-item input[type="checkbox"] { accent-color: var(--brand-primary); width: 16px; height: 16px; margin: 0; }
+      .segmented-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 20px; font-size: 14px; font-weight: 500; border: 1px solid var(--brand-border); cursor: pointer; transition: all 0.15s; background: var(--brand-card); color: var(--brand-muted); }
+      .segmented-btn:first-child { border-radius: var(--brand-radius-md) 0 0 var(--brand-radius-md); }
+      .segmented-btn:last-child { border-radius: 0 var(--brand-radius-md) var(--brand-radius-md) 0; }
+      .segmented-btn.active { background: var(--brand-primary); color: #FFFFFF; border-color: var(--brand-primary); }
+      .status-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+      .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+      .status-dot.green { background: var(--brand-state-success); }
+      .status-dot.yellow { background: var(--brand-state-warning); }
+      .status-dot.blue { background: var(--brand-state-info); }
+      .status-dot.red { background: var(--brand-state-error); }
+      .format-tag { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: var(--brand-radius-pill); font-size: 12px; font-weight: 500; }
+      .format-tag.docx { background: rgba(59,130,196,0.1); color: #3B82C4; }
+      .format-tag.doc { background: rgba(102,112,133,0.1); color: #667085; }
+      .format-tag.txt { background: rgba(22,138,91,0.1); color: #168A5B; }
+      .table-wrapper { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; }
+      table th { font-size: 12px; font-weight: 600; color: var(--brand-muted); text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--brand-border); text-transform: uppercase; letter-spacing: 0.5px; }
+      table td { font-size: 14px; color: var(--brand-foreground); padding: 12px; border-bottom: 1px solid var(--brand-border); }
+      table tr:last-child td { border-bottom: none; }
+      table tr:hover td { background: rgba(0,0,0,0.01); }
+      .sticky-bottom { position: sticky; bottom: 0; z-index: 10; }
+      .section-label { font-size: 13px; font-weight: 600; color: var(--brand-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+      .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: var(--brand-radius-md); font-size: 14px; cursor: pointer; transition: all 0.15s; text-decoration: none; }
+      .nav-item.active { background: var(--brand-sidebar-active-bg); color: var(--brand-sidebar-active-fg); border-left: 3px solid var(--brand-sidebar-active-fg); }
+      .nav-item:not(.active) { color: var(--brand-sidebar-fg); border-left: 3px solid transparent; }
+      .nav-item:not(.active):hover { background: rgba(255,255,255,0.06); }
+    </style>
+
+    <div class="app-shell" style="background-color: var(--brand-background); font-family: var(--brand-font-family);">
+      <!-- SIDEBAR -->
+      <aside class="app-sidebar w-[220px] flex flex-col h-full" style="background-color: var(--brand-sidebar-bg);">
+        <div class="px-5 pt-6 pb-4">
+          <div class="flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-6 h-6" style="color: #168AAD;"></i>
+            <span class="text-base font-semibold" style="color: #FFFFFF;">DocMask</span>
+          </div>
+          <p class="text-xs mt-1" style="color: #667085;">本地文档保护</p>
+        </div>
+        <nav class="flex-1 px-3 space-y-1">
+          <a data-dom-id="nav-workbench" href="#" class="nav-item active" style="background-color: rgba(22,138,173,0.15); color: #168AAD; border-left: 3px solid #168AAD;">
+            <i data-lucide="workflow" class="w-5 h-5"></i> 工作台
+          </a>
+          <a data-dom-id="nav-codebook" href="#" class="nav-item" style="color: #DCE3EA;">
+            <i data-lucide="book-open" class="w-5 h-5"></i> 密码本
+          </a>
+          <a data-dom-id="nav-results" href="#" class="nav-item" style="color: #DCE3EA;">
+            <i data-lucide="clipboard-list" class="w-5 h-5"></i> 任务结果
+          </a>
+          <a data-dom-id="nav-settings" href="#" class="nav-item" style="color: #DCE3EA;">
+            <i data-lucide="settings" class="w-5 h-5"></i> 设置与帮助
+          </a>
+        </nav>
+        <div class="px-5 py-4 border-t" style="border-color: rgba(255,255,255,0.08);">
+          <div class="flex items-center gap-2 text-xs" style="color: #667085;">
+            <i data-lucide="shield" class="w-3.5 h-3.5"></i> 纯本地运行
+          </div>
+          <p class="text-xs mt-0.5" style="color: #4B5563;">文件不会上传</p>
+          <p class="text-xs mt-1" style="color: #4B5563;">v1.0.0</p>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT -->
+      <main class="app-main">
+        <!-- Page Header -->
+        <div class="px-8 pt-6 pb-2 flex items-center justify-between">
+          <div>
+            <h1 class="text-xl font-semibold" style="color: var(--brand-foreground);">工作台</h1>
+            <p class="text-sm mt-0.5" style="color: var(--brand-muted);">创建一个脱敏或恢复任务</p>
+          </div>
+          <div class="status-badge">
+            <span class="status-dot green"></span>
+            <span style="color: var(--brand-state-success);">就绪</span>
+          </div>
+        </div>
+
+        <div class="px-8 pb-4 space-y-5" style="max-width: 860px;">
+          <!-- Section 2: Mode Switch -->
+          <div class="card p-6">
+            <div class="section-label">任务模式</div>
+            <div class="flex" style="margin-bottom: 12px;">
+              <button data-dom-id="mode-mask" class="segmented-btn active">
+                <i data-lucide="shield-check" class="w-4 h-4"></i> 脱敏文档
+              </button>
+              <button data-dom-id="mode-restore" class="segmented-btn">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> 恢复文档
+              </button>
+            </div>
+            <p class="text-sm" style="color: var(--brand-muted);">脱敏：替换敏感信息，可使用同一密码本恢复</p>
+          </div>
+
+          <!-- Section 3: Codebook Card -->
+          <div class="card p-6">
+            <div class="section-label">1. 密码本</div>
+            <div class="flex gap-3 items-center">
+              <input type="text" class="input-field" placeholder="请选择 .txt 密码本" value="desensitization_rules.txt" style="flex: 1;">
+              <button data-dom-id="btn-select-codebook" class="btn-secondary">
+                <i data-lucide="folder-open" class="w-4 h-4"></i> 选择文件
+              </button>
+            </div>
+            <div class="mt-4 flex items-center justify-between">
+              <div class="status-badge">
+                <span class="status-dot green"></span>
+                <span style="color: var(--brand-state-success); font-weight: 500;">✓ 校验通过</span>
+                <span style="color: var(--brand-muted); margin-left: 8px;">42 条精确规则 · 2 条正则规则</span>
+              </div>
+              <button class="btn-link">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i> 查看详情
+              </button>
+            </div>
+            <div class="mt-3 flex items-start gap-2 p-3 rounded-lg" style="background: rgba(214,139,22,0.06); border: 1px solid rgba(214,139,22,0.15);">
+              <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0 mt-0.5" style="color: var(--brand-state-warning);"></i>
+              <span class="text-sm" style="color: var(--brand-state-warning);">正则规则不可逆，恢复时无法还原正则匹配的原始内容</span>
+            </div>
+          </div>
+
+          <!-- Section 4: File Queue -->
+          <div class="card p-6">
+            <div class="section-label">2. 待处理文件</div>
+            <div class="flex items-center gap-3 mb-4 flex-wrap">
+              <button data-dom-id="btn-add-file" class="btn-secondary">
+                <i data-lucide="plus" class="w-4 h-4"></i> 添加文件
+              </button>
+              <button data-dom-id="btn-add-folder" class="btn-secondary">
+                <i data-lucide="folder-plus" class="w-4 h-4"></i> 添加文件夹
+              </button>
+              <div class="flex items-center gap-4 ml-2">
+                <label class="checkbox-item">
+                  <input type="checkbox" checked> <span class="text-sm" style="color: var(--brand-muted);">DOCX</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" checked> <span class="text-sm" style="color: var(--brand-muted);">DOC</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" checked> <span class="text-sm" style="color: var(--brand-muted);">TXT</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>文件名</th>
+                    <th>格式</th>
+                    <th>大小</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-4 h-4" style="color: var(--brand-state-info);"></i>
+                        <span>合同.docx</span>
+                      </div>
+                    </td>
+                    <td><span class="format-tag docx">DOCX</span></td>
+                    <td style="color: var(--brand-muted);">1.8 MB</td>
+                    <td>
+                      <div class="status-badge">
+                        <span class="status-dot blue"></span>
+                        <span style="color: var(--brand-muted);">等待预检</span>
+                      </div>
+                    </td>
+                    <td><button class="btn-ghost" style="color: var(--brand-state-error);">移除</button></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-4 h-4" style="color: var(--brand-state-success);"></i>
+                        <span>客户名单.txt</span>
+                      </div>
+                    </td>
+                    <td><span class="format-tag txt">TXT</span></td>
+                    <td style="color: var(--brand-muted);">42 KB</td>
+                    <td>
+                      <div class="status-badge">
+                        <span class="status-dot blue"></span>
+                        <span style="color: var(--brand-muted);">等待预检</span>
+                      </div>
+                    </td>
+                    <td><button class="btn-ghost" style="color: var(--brand-state-error);">移除</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between pt-3 border-t" style="border-color: var(--brand-border);">
+              <span class="text-sm" style="color: var(--brand-muted);">2 个文件 · 支持拖放文件或文件夹</span>
+              <div class="flex gap-2">
+                <button data-dom-id="btn-clear-files" class="btn-ghost" style="color: var(--brand-state-error);">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i> 清空
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5: Output Settings -->
+          <div class="card p-6">
+            <div class="section-label">3. 输出设置</div>
+            <div class="radio-group mb-4">
+              <label class="radio-item">
+                <input type="radio" name="output-dir" checked>
+                <span>保存到原文件所在目录</span>
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="output-dir">
+                <span>指定目录</span>
+              </label>
+            </div>
+            <div class="flex gap-3 items-center mb-4">
+              <input type="text" class="input-field" placeholder="选择输出目录..." style="flex: 1;" disabled>
+              <button class="btn-secondary" disabled>
+                <i data-lucide="folder-open" class="w-4 h-4"></i> 浏览
+              </button>
+            </div>
+            <p class="text-sm mb-4" style="color: var(--brand-muted);">文件名自动添加：_desensitized；重名时自动追加序号，不覆盖原文件</p>
+            <label class="checkbox-item">
+              <input type="checkbox" checked>
+              <span>生成覆盖率报告（仅脱敏）</span>
+            </label>
+          </div>
+
+          <!-- Spacer for sticky bottom bar -->
+          <div style="height: 80px;"></div>
+        </div>
+
+        <!-- Section 6: Execute Bar (Sticky Bottom) -->
+        <div class="sticky-bottom" style="background: var(--brand-card); border-top: 1px solid var(--brand-border); padding: 16px 32px;">
+          <div class="flex items-center justify-between" style="max-width: 860px; margin: 0 auto;">
+            <div class="flex items-center gap-4">
+              <span class="text-sm" style="color: var(--brand-muted);">2 个文件待处理</span>
+              <span style="color: var(--brand-border);">·</span>
+              <span class="status-badge" style="color: var(--brand-state-success);">
+                <span class="status-dot green"></span> 密码本已通过校验
+              </span>
+            </div>
+            <div class="flex items-center gap-3">
+              <button data-dom-id="btn-stop" class="btn-secondary" style="border-color: var(--brand-state-error); color: var(--brand-state-error);">
+                <i data-lucide="square" class="w-4 h-4"></i> 停止
+              </button>
+              <button data-dom-id="btn-execute" class="btn-primary" style="background: #168AAD;">
+                <i data-lucide="play" class="w-4 h-4"></i> 预检并执行脱敏
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

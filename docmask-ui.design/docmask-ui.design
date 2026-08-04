@@ -1,0 +1,73 @@
+{
+  "data": [
+    {
+      "id": "page-workbench",
+      "title": "工作台",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1753783200000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/workbench.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-codebook",
+      "title": "密码本",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1753783200000,
+      "canvasData": {
+        "x": 620,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/codebook.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-results",
+      "title": "任务结果",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1753783200000,
+      "canvasData": {
+        "x": 1240,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/results.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-settings",
+      "title": "设置与帮助",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1753783200000,
+      "canvasData": {
+        "x": 1860,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/settings.html",
+        "interactions": []
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "DocMask UI 原型"
+  }
+}

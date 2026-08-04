@@ -1,0 +1,2 @@
+# 包含无效正则的密码本
+regex:[invalid==>test

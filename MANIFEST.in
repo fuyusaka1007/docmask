@@ -1,0 +1,7 @@
+include docmask_cli.py
+include docmask_ui.py
+include requirements.txt
+include README.md
+include CHANGELOG.md
+
+recursive-include docmask/ui/assets *

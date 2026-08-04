@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密码本</title>
+    <style id="theme-vars">
+/* DocMask UI — Design Tokens */
+:root {
+  /* Brand */
+  --brand-primary: #168AAD;
+  --brand-primary-hover: #11728F;
+  --brand-primary-foreground: #FFFFFF;
+
+  /* Surface */
+  --brand-background: #F4F7FA;
+  --brand-foreground: #172033;
+  --brand-muted: #667085;
+  --brand-muted-foreground: #9CA3AF;
+  --brand-card: #FFFFFF;
+  --brand-card-foreground: #172033;
+  --brand-popover: #FFFFFF;
+  --brand-popover-foreground: #172033;
+  --brand-border: #DCE3EA;
+  --brand-input: #DCE3EA;
+  --brand-ring: #168AAD;
+
+  /* Sidebar */
+  --brand-sidebar-bg: #0F1B2D;
+  --brand-sidebar-fg: #DCE3EA;
+  --brand-sidebar-active-bg: rgba(22, 138, 173, 0.15);
+  --brand-sidebar-active-fg: #168AAD;
+
+  /* States */
+  --brand-state-success: #168A5B;
+  --brand-state-warning: #D68B16;
+  --brand-state-error: #D94A4A;
+  --brand-state-info: #3B82C4;
+
+  /* Radius */
+  --brand-radius-sm: 4px;
+  --brand-radius-md: 8px;
+  --brand-radius-lg: 12px;
+  --brand-radius-pill: 999px;
+
+  /* Shadows */
+  --brand-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --brand-shadow-2: 0 8px 24px -8px rgba(15, 23, 42, 0.18);
+  --brand-shadow-3: 0 24px 60px -20px rgba(15, 23, 42, 0.30);
+
+  /* Spacing */
+  --brand-s-1: 4px;
+  --brand-s-2: 8px;
+  --brand-s-3: 12px;
+  --brand-s-4: 16px;
+  --brand-s-5: 24px;
+  --brand-s-6: 32px;
+  --brand-s-7: 48px;
+  --brand-s-8: 80px;
+
+  /* Typography */
+  --brand-font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  --brand-font-mono: "Cascadia Code", "Fira Code", "Consolas", monospace;
+}
+
+/* Secondary / Accent aliases — map to primary for free-explore compliance */
+:root {
+  --brand-secondary: var(--brand-background);
+  --brand-secondary-foreground: var(--brand-foreground);
+  --brand-accent: var(--brand-primary);
+  --brand-accent-foreground: var(--brand-primary-foreground);
+  --brand-destructive: var(--brand-state-error);
+  --brand-destructive-foreground: #FFFFFF;
+}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--brand-background);
+    --color-foreground: var(--brand-foreground);
+    --color-card: var(--brand-card);
+    --color-card-foreground: var(--brand-card-foreground);
+    --color-popover: var(--brand-popover);
+    --color-popover-foreground: var(--brand-popover-foreground);
+    --color-primary: var(--brand-primary);
+    --color-primary-foreground: var(--brand-primary-foreground);
+    --color-secondary: var(--brand-secondary);
+    --color-secondary-foreground: var(--brand-secondary-foreground);
+    --color-muted: var(--brand-muted);
+    --color-muted-foreground: var(--brand-muted-foreground);
+    --color-accent: var(--brand-accent);
+    --color-accent-foreground: var(--brand-accent-foreground);
+    --color-destructive: var(--brand-destructive);
+    --color-destructive-foreground: var(--brand-destructive-foreground);
+    --color-border: var(--brand-border);
+    --color-input: var(--brand-input);
+    --color-ring: var(--brand-ring);
+    --radius-sm: var(--brand-radius-sm);
+    --radius-md: var(--brand-radius-md);
+    --radius-lg: var(--brand-radius-lg);
+  }
+  @layer base {
+    body { background: var(--brand-background); color: var(--brand-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--brand-background); }
+      .text-background { color: var(--brand-background); }
+      .border-background { border-color: var(--brand-background); }
+      .ring-background { --tw-ring-color: var(--brand-background); }
+      .bg-foreground { background-color: var(--brand-foreground); }
+      .text-foreground { color: var(--brand-foreground); }
+      .border-foreground { border-color: var(--brand-foreground); }
+      .ring-foreground { --tw-ring-color: var(--brand-foreground); }
+      .bg-card { background-color: var(--brand-card); }
+      .text-card { color: var(--brand-card); }
+      .border-card { border-color: var(--brand-card); }
+      .ring-card { --tw-ring-color: var(--brand-card); }
+      .bg-card-foreground { background-color: var(--brand-card-foreground); }
+      .text-card-foreground { color: var(--brand-card-foreground); }
+      .border-card-foreground { border-color: var(--brand-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--brand-card-foreground); }
+      .bg-popover { background-color: var(--brand-popover); }
+      .text-popover { color: var(--brand-popover); }
+      .border-popover { border-color: var(--brand-popover); }
+      .ring-popover { --tw-ring-color: var(--brand-popover); }
+      .bg-popover-foreground { background-color: var(--brand-popover-foreground); }
+      .text-popover-foreground { color: var(--brand-popover-foreground); }
+      .border-popover-foreground { border-color: var(--brand-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--brand-popover-foreground); }
+      .bg-primary { background-color: var(--brand-primary); }
+      .text-primary { color: var(--brand-primary); }
+      .border-primary { border-color: var(--brand-primary); }
+      .ring-primary { --tw-ring-color: var(--brand-primary); }
+      .bg-primary-foreground { background-color: var(--brand-primary-foreground); }
+      .text-primary-foreground { color: var(--brand-primary-foreground); }
+      .border-primary-foreground { border-color: var(--brand-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--brand-primary-foreground); }
+      .bg-secondary { background-color: var(--brand-secondary); }
+      .text-secondary { color: var(--brand-secondary); }
+      .border-secondary { border-color: var(--brand-secondary); }
+      .ring-secondary { --tw-ring-color: var(--brand-secondary); }
+      .bg-secondary-foreground { background-color: var(--brand-secondary-foreground); }
+      .text-secondary-foreground { color: var(--brand-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--brand-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--brand-secondary-foreground); }
+      .bg-muted { background-color: var(--brand-muted); }
+      .text-muted { color: var(--brand-muted); }
+      .border-muted { border-color: var(--brand-muted); }
+      .ring-muted { --tw-ring-color: var(--brand-muted); }
+      .bg-muted-foreground { background-color: var(--brand-muted-foreground); }
+      .text-muted-foreground { color: var(--brand-muted-foreground); }
+      .border-muted-foreground { border-color: var(--brand-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--brand-muted-foreground); }
+      .bg-accent { background-color: var(--brand-accent); }
+      .text-accent { color: var(--brand-accent); }
+      .border-accent { border-color: var(--brand-accent); }
+      .ring-accent { --tw-ring-color: var(--brand-accent); }
+      .bg-accent-foreground { background-color: var(--brand-accent-foreground); }
+      .text-accent-foreground { color: var(--brand-accent-foreground); }
+      .border-accent-foreground { border-color: var(--brand-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--brand-accent-foreground); }
+      .bg-destructive { background-color: var(--brand-destructive); }
+      .text-destructive { color: var(--brand-destructive); }
+      .border-destructive { border-color: var(--brand-destructive); }
+      .ring-destructive { --tw-ring-color: var(--brand-destructive); }
+      .bg-destructive-foreground { background-color: var(--brand-destructive-foreground); }
+      .text-destructive-foreground { color: var(--brand-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--brand-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--brand-destructive-foreground); }
+      .bg-border { background-color: var(--brand-border); }
+      .text-border { color: var(--brand-border); }
+      .border-border { border-color: var(--brand-border); }
+      .ring-border { --tw-ring-color: var(--brand-border); }
+      .bg-input { background-color: var(--brand-input); }
+      .text-input { color: var(--brand-input); }
+      .border-input { border-color: var(--brand-input); }
+      .ring-input { --tw-ring-color: var(--brand-input); }
+      .bg-ring { background-color: var(--brand-ring); }
+      .text-ring { color: var(--brand-ring); }
+      .border-ring { border-color: var(--brand-ring); }
+      .ring-ring { --tw-ring-color: var(--brand-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <style id="critical-layout">
+      .app-shell { display: flex; height: 100vh; overflow: hidden; }
+      .content-area { flex: 1; overflow-y: auto; background-color: var(--brand-background); }
+      .card { background-color: var(--brand-card); border-radius: var(--brand-radius-lg); box-shadow: var(--brand-shadow-1); border: 1px solid var(--brand-border); }
+      .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background-color: var(--brand-primary); color: var(--brand-primary-foreground); height: 42px; padding: 0 20px; border-radius: var(--brand-radius-md); font-weight: 500; font-size: 14px; cursor: pointer; border: none; transition: background-color 0.15s; white-space: nowrap; }
+      .btn-primary:hover { background-color: var(--brand-primary-hover); }
+      .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background-color: var(--brand-card); color: var(--brand-foreground); height: 36px; padding: 0 16px; border-radius: var(--brand-radius-md); border: 1px solid var(--brand-border); font-weight: 500; font-size: 13px; cursor: pointer; transition: background-color 0.15s; white-space: nowrap; }
+      .btn-secondary:hover { background-color: var(--brand-background); }
+      .badge-success { display: inline-flex; align-items: center; gap: 4px; background-color: rgba(22,138,91,0.1); color: var(--brand-state-success); font-size: 12px; font-weight: 500; padding: 2px 10px; border-radius: var(--brand-radius-pill); }
+      .badge-warning { display: inline-flex; align-items: center; gap: 4px; background-color: rgba(214,139,22,0.1); color: var(--brand-state-warning); font-size: 12px; font-weight: 500; padding: 2px 10px; border-radius: var(--brand-radius-pill); }
+      .stat-card-teal { border-left: 3px solid var(--brand-primary); }
+      .stat-card-amber { border-left: 3px solid var(--brand-state-warning); }
+      .stat-card-info { border-left: 3px solid var(--brand-state-info); }
+      .nav-item:hover { background-color: rgba(22,138,173,0.08); }
+      .validation-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; font-size: 14px; }
+      .validation-item + .validation-item { border-top: 1px solid var(--brand-border); }
+      .dot-success { width: 8px; height: 8px; border-radius: 50%; background-color: var(--brand-state-success); flex-shrink: 0; margin-top: 6px; }
+      .dot-warning { width: 8px; height: 8px; border-radius: 50%; background-color: var(--brand-state-warning); flex-shrink: 0; margin-top: 6px; }
+      .dot-info { width: 8px; height: 8px; border-radius: 50%; background-color: var(--brand-state-info); flex-shrink: 0; margin-top: 6px; }
+      .guide-details summary { cursor: pointer; font-weight: 500; font-size: 14px; color: var(--brand-primary); padding: 8px 0; list-style: none; }
+      .guide-details summary::-webkit-details-marker { display: none; }
+      .guide-details summary::before { content: '▸ '; display: inline-block; transition: transform 0.2s; font-size: 12px; }
+      .guide-details[open] summary::before { transform: rotate(90deg); }
+      .code-block { background-color: #F4F7FA; border: 1px solid var(--brand-border); border-radius: var(--brand-radius-md); padding: 12px 16px; font-family: var(--brand-font-mono); font-size: 13px; color: var(--brand-foreground); overflow-x: auto; }
+    </style>
+    <main class="app-shell">
+      <!-- Shared Sidebar -->
+      <aside class="w-[220px] flex-shrink-0 flex flex-col h-full" style="background-color: #0F1B2D;">
+        <div class="px-5 pt-6 pb-4">
+          <div class="flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-6 h-6" style="color: #168AAD;"></i>
+            <span class="text-base font-semibold" style="color: #FFFFFF;">DocMask</span>
+          </div>
+          <p class="text-xs mt-1" style="color: #667085;">本地文档保护</p>
+        </div>
+        <nav class="flex-1 px-3 space-y-1">
+          <a data-dom-id="nav-workbench" href="#" class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors" style="color: #DCE3EA;">
+            <i data-lucide="workflow" class="w-5 h-5"></i> 工作台
+          </a>
+          <a data-dom-id="nav-codebook" href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors" style="background-color: rgba(22,138,173,0.15); color: #168AAD; border-left: 3px solid #168AAD;">
+            <i data-lucide="book-open" class="w-5 h-5"></i> 密码本
+          </a>
+          <a data-dom-id="nav-results" href="#" class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors" style="color: #DCE3EA;">
+            <i data-lucide="clipboard-list" class="w-5 h-5"></i> 任务结果
+          </a>
+          <a data-dom-id="nav-settings" href="#" class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors" style="color: #DCE3EA;">
+            <i data-lucide="settings" class="w-5 h-5"></i> 设置与帮助
+          </a>
+        </nav>
+        <div class="px-5 py-4 border-t" style="border-color: rgba(255,255,255,0.08);">
+          <div class="flex items-center gap-2 text-xs" style="color: #667085;">
+            <i data-lucide="shield" class="w-3.5 h-3.5"></i> 纯本地运行
+          </div>
+          <p class="text-xs mt-0.5" style="color: #4B5563;">文件不会上传</p>
+          <p class="text-xs mt-1" style="color: #4B5563;">v1.0.0</p>
+        </div>
+      </aside>
+
+      <!-- Content Area -->
+      <div class="content-area">
+        <div class="px-8 py-6 max-w-[960px] mx-auto">
+
+          <!-- Page Header -->
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h1 class="text-xl font-semibold" style="color: var(--brand-foreground);">密码本</h1>
+              <p class="text-sm mt-1" style="color: var(--brand-muted);">校验规则完整性，提前发现不可逆风险</p>
+            </div>
+            <button data-dom-id="btn-select-codebook" class="btn-primary">
+              <i data-lucide="folder-open" class="w-4 h-4"></i> 选择密码本文件
+            </button>
+          </div>
+
+          <!-- Section 1: Current Codebook Card -->
+          <div class="card p-5 mb-5">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <i data-lucide="file-text" class="w-5 h-5" style="color: var(--brand-primary);"></i>
+                <span class="text-base font-semibold" style="color: var(--brand-foreground);">codebook.txt</span>
+                <span class="badge-success">
+                  <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> 校验通过
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-sm mb-3" style="color: var(--brand-muted);">
+              <i data-lucide="folder" class="w-4 h-4"></i>
+              <span>D:\DocMask\codebook.txt</span>
+            </div>
+            <div class="flex items-center gap-4 text-xs mb-4" style="color: var(--brand-muted);">
+              <span>42 条精确规则</span>
+              <span class="w-px h-3" style="background-color: var(--brand-border);"></span>
+              <span>2 条正则规则</span>
+              <span class="w-px h-3" style="background-color: var(--brand-border);"></span>
+              <span>UTF-8</span>
+              <span class="w-px h-3" style="background-color: var(--brand-border);"></span>
+              <span>刚刚校验</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <button data-dom-id="btn-revalidate" class="btn-secondary">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> 重新校验
+              </button>
+              <button data-dom-id="btn-relocate" class="btn-secondary">
+                <i data-lucide="folder-search" class="w-4 h-4"></i> 在系统中定位
+              </button>
+              <button data-dom-id="btn-replace" class="btn-secondary">
+                <i data-lucide="file-input" class="w-4 h-4"></i> 更换文件
+              </button>
+            </div>
+          </div>
+
+          <!-- Section 2: Summary Stats -->
+          <div class="grid grid-cols-3 gap-4 mb-5">
+            <!-- Card 1: Reversible Rules -->
+            <div class="card stat-card-teal p-4">
+              <div class="text-xs font-medium mb-1" style="color: var(--brand-muted);">可逆规则</div>
+              <div class="text-2xl font-bold mb-1" style="color: var(--brand-primary);">42</div>
+              <div class="text-xs" style="color: var(--brand-muted);">精确匹配</div>
+            </div>
+            <!-- Card 2: Regex Rules -->
+            <div class="card stat-card-amber p-4">
+              <div class="text-xs font-medium mb-1" style="color: var(--brand-muted);">正则规则</div>
+              <div class="text-2xl font-bold mb-1" style="color: var(--brand-state-warning);">2</div>
+              <div class="text-xs" style="color: var(--brand-muted);">不可逆</div>
+            </div>
+            <!-- Card 3: Risk Check -->
+            <div class="card stat-card-amber p-4">
+              <div class="text-xs font-medium mb-1" style="color: var(--brand-muted);">风险检查</div>
+              <div class="text-2xl font-bold mb-1" style="color: var(--brand-state-warning);">1 项警告</div>
+              <div class="text-xs" style="color: var(--brand-muted);">建议处理后再执行</div>
+            </div>
+          </div>
+
+          <!-- Section 3: Validation Results -->
+          <div class="card p-5 mb-5">
+            <h2 class="text-base font-semibold mb-1" style="color: var(--brand-foreground);">校验结果</h2>
+            <p class="text-xs mb-4" style="color: var(--brand-muted);">规则完整性分析</p>
+            <div class="validation-item">
+              <div class="dot-success"></div>
+              <span style="color: var(--brand-foreground);">未发现重复脱敏词</span>
+            </div>
+            <div class="validation-item">
+              <div class="dot-success"></div>
+              <span style="color: var(--brand-foreground);">未发现精确规则交叉冲突</span>
+            </div>
+            <div class="validation-item">
+              <div class="dot-success"></div>
+              <span style="color: var(--brand-foreground);">正则表达式格式有效</span>
+            </div>
+            <div class="validation-item">
+              <div class="dot-warning"></div>
+              <span style="color: var(--brand-foreground);">包含 2 条正则规则，匹配到的原始内容无法恢复</span>
+            </div>
+            <div class="validation-item">
+              <div class="dot-info"></div>
+              <span style="color: var(--brand-muted);">文档级脱敏词冲突将在添加待处理文件后检查</span>
+            </div>
+          </div>
+
+          <!-- Section 4: Safety Tips -->
+          <div class="card p-5 mb-5" style="border-left: 3px solid var(--brand-state-info);">
+            <div class="flex items-start gap-3">
+              <i data-lucide="info" class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: var(--brand-state-info);"></i>
+              <div>
+                <h3 class="text-sm font-semibold mb-1" style="color: var(--brand-foreground);">安全提示</h3>
+                <p class="text-sm" style="color: var(--brand-muted);">密码本包含原文与脱敏词的对应关系，请妥善保管。DocMask 不上传文件。</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5: Codebook Guide (collapsible) -->
+          <details class="guide-details card p-5 mb-5">
+            <summary class="flex items-center gap-2">
+              <i data-lucide="book-open" class="w-4 h-4" style="color: var(--brand-primary);"></i>
+              密码本格式指南
+            </summary>
+            <div class="mt-4 space-y-4">
+              <div>
+                <p class="text-sm font-medium mb-2" style="color: var(--brand-foreground);">精确匹配格式</p>
+                <div class="code-block">原文==>脱敏词</div>
+                <p class="text-xs mt-2" style="color: var(--brand-muted);">每行一条规则，使用 <code style="background-color: #F4F7FA; padding: 1px 6px; border-radius: 3px; font-family: var(--brand-font-mono);">==></code> 分隔原文和脱敏后的替换词。</p>
+              </div>
+              <div>
+                <p class="text-sm font-medium mb-2" style="color: var(--brand-foreground);">正则匹配格式</p>
+                <div class="code-block">/正则表达式/==>脱敏词</div>
+                <p class="text-xs mt-2" style="color: var(--brand-state-warning);">正则规则匹配到的原始内容 <strong>不可恢复</strong>，请谨慎使用。</p>
+              </div>
+              <div>
+                <p class="text-sm font-medium mb-2" style="color: var(--brand-foreground);">占位符建议</p>
+                <p class="text-sm" style="color: var(--brand-muted);">使用不易自然出现的专用标记，例如 <code style="background-color: #F4F7FA; padding: 1px 6px; border-radius: 3px; font-family: var(--brand-font-mono);">⟦DM-NAME-01⟧</code></p>
+              </div>
+              <div>
+                <p class="text-sm font-medium mb-2" style="color: var(--brand-state-warning);">注意事项</p>
+                <p class="text-sm" style="color: var(--brand-muted);">不建议使用 <code style="background-color: #F4F7FA; padding: 1px 6px; border-radius: 3px; font-family: var(--brand-font-mono);">%</code>、<code style="background-color: #F4F7FA; padding: 1px 6px; border-radius: 3px; font-family: var(--brand-font-mono);">!</code>、<code style="background-color: #F4F7FA; padding: 1px 6px; border-radius: 3px; font-family: var(--brand-font-mono);">￥</code> 等常见单字符符号作为数字替换值</p>
+              </div>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务结果</title>
+    <style id="theme-vars">
+/* DocMask UI — Design Tokens */
+:root {
+  /* Brand */
+  --brand-primary: #168AAD;
+  --brand-primary-hover: #11728F;
+  --brand-primary-foreground: #FFFFFF;
+
+  /* Surface */
+  --brand-background: #F4F7FA;
+  --brand-foreground: #172033;
+  --brand-muted: #667085;
+  --brand-muted-foreground: #9CA3AF;
+  --brand-card: #FFFFFF;
+  --brand-card-foreground: #172033;
+  --brand-popover: #FFFFFF;
+  --brand-popover-foreground: #172033;
+  --brand-border: #DCE3EA;
+  --brand-input: #DCE3EA;
+  --brand-ring: #168AAD;
+
+  /* Sidebar */
+  --brand-sidebar-bg: #0F1B2D;
+  --brand-sidebar-fg: #DCE3EA;
+  --brand-sidebar-active-bg: rgba(22, 138, 173, 0.15);
+  --brand-sidebar-active-fg: #168AAD;
+
+  /* States */
+  --brand-state-success: #168A5B;
+  --brand-state-warning: #D68B16;
+  --brand-state-error: #D94A4A;
+  --brand-state-info: #3B82C4;
+
+  /* Radius */
+  --brand-radius-sm: 4px;
+  --brand-radius-md: 8px;
+  --brand-radius-lg: 12px;
+  --brand-radius-pill: 999px;
+
+  /* Shadows */
+  --brand-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --brand-shadow-2: 0 8px 24px -8px rgba(15, 23, 42, 0.18);
+  --brand-shadow-3: 0 24px 60px -20px rgba(15, 23, 42, 0.30);
+
+  /* Spacing */
+  --brand-s-1: 4px;
+  --brand-s-2: 8px;
+  --brand-s-3: 12px;
+  --brand-s-4: 16px;
+  --brand-s-5: 24px;
+  --brand-s-6: 32px;
+  --brand-s-7: 48px;
+  --brand-s-8: 80px;
+
+  /* Typography */
+  --brand-font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  --brand-font-mono: "Cascadia Code", "Fira Code", "Consolas", monospace;
+}
+
+/* Secondary / Accent aliases — map to primary for free-explore compliance */
+:root {
+  --brand-secondary: var(--brand-background);
+  --brand-secondary-foreground: var(--brand-foreground);
+  --brand-accent: var(--brand-primary);
+  --brand-accent-foreground: var(--brand-primary-foreground);
+  --brand-destructive: var(--brand-state-error);
+  --brand-destructive-foreground: #FFFFFF;
+}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--brand-background);
+    --color-foreground: var(--brand-foreground);
+    --color-card: var(--brand-card);
+    --color-card-foreground: var(--brand-card-foreground);
+    --color-popover: var(--brand-popover);
+    --color-popover-foreground: var(--brand-popover-foreground);
+    --color-primary: var(--brand-primary);
+    --color-primary-foreground: var(--brand-primary-foreground);
+    --color-secondary: var(--brand-secondary);
+    --color-secondary-foreground: var(--brand-secondary-foreground);
+    --color-muted: var(--brand-muted);
+    --color-muted-foreground: var(--brand-muted-foreground);
+    --color-accent: var(--brand-accent);
+    --color-accent-foreground: var(--brand-accent-foreground);
+    --color-destructive: var(--brand-destructive);
+    --color-destructive-foreground: var(--brand-destructive-foreground);
+    --color-border: var(--brand-border);
+    --color-input: var(--brand-input);
+    --color-ring: var(--brand-ring);
+    --radius-sm: var(--brand-radius-sm);
+    --radius-md: var(--brand-radius-md);
+    --radius-lg: var(--brand-radius-lg);
+  }
+  @layer base {
+    body { background: var(--brand-background); color: var(--brand-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--brand-background); }
+      .text-background { color: var(--brand-background); }
+      .border-background { border-color: var(--brand-background); }
+      .ring-background { --tw-ring-color: var(--brand-background); }
+      .bg-foreground { background-color: var(--brand-foreground); }
+      .text-foreground { color: var(--brand-foreground); }
+      .border-foreground { border-color: var(--brand-foreground); }
+      .ring-foreground { --tw-ring-color: var(--brand-foreground); }
+      .bg-card { background-color: var(--brand-card); }
+      .text-card { color: var(--brand-card); }
+      .border-card { border-color: var(--brand-card); }
+      .ring-card { --tw-ring-color: var(--brand-card); }
+      .bg-card-foreground { background-color: var(--brand-card-foreground); }
+      .text-card-foreground { color: var(--brand-card-foreground); }
+      .border-card-foreground { border-color: var(--brand-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--brand-card-foreground); }
+      .bg-popover { background-color: var(--brand-popover); }
+      .text-popover { color: var(--brand-popover); }
+      .border-popover { border-color: var(--brand-popover); }
+      .ring-popover { --tw-ring-color: var(--brand-popover); }
+      .bg-popover-foreground { background-color: var(--brand-popover-foreground); }
+      .text-popover-foreground { color: var(--brand-popover-foreground); }
+      .border-popover-foreground { border-color: var(--brand-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--brand-popover-foreground); }
+      .bg-primary { background-color: var(--brand-primary); }
+      .text-primary { color: var(--brand-primary); }
+      .border-primary { border-color: var(--brand-primary); }
+      .ring-primary { --tw-ring-color: var(--brand-primary); }
+      .bg-primary-foreground { background-color: var(--brand-primary-foreground); }
+      .text-primary-foreground { color: var(--brand-primary-foreground); }
+      .border-primary-foreground { border-color: var(--brand-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--brand-primary-foreground); }
+      .bg-secondary { background-color: var(--brand-secondary); }
+      .text-secondary { color: var(--brand-secondary); }
+      .border-secondary { border-color: var(--brand-secondary); }
+      .ring-secondary { --tw-ring-color: var(--brand-secondary); }
+      .bg-secondary-foreground { background-color: var(--brand-secondary-foreground); }
+      .text-secondary-foreground { color: var(--brand-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--brand-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--brand-secondary-foreground); }
+      .bg-muted { background-color: var(--brand-muted); }
+      .text-muted { color: var(--brand-muted); }
+      .border-muted { border-color: var(--brand-muted); }
+      .ring-muted { --tw-ring-color: var(--brand-muted); }
+      .bg-muted-foreground { background-color: var(--brand-muted-foreground); }
+      .text-muted-foreground { color: var(--brand-muted-foreground); }
+      .border-muted-foreground { border-color: var(--brand-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--brand-muted-foreground); }
+      .bg-accent { background-color: var(--brand-accent); }
+      .text-accent { color: var(--brand-accent); }
+      .border-accent { border-color: var(--brand-accent); }
+      .ring-accent { --tw-ring-color: var(--brand-accent); }
+      .bg-accent-foreground { background-color: var(--brand-accent-foreground); }
+      .text-accent-foreground { color: var(--brand-accent-foreground); }
+      .border-accent-foreground { border-color: var(--brand-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--brand-accent-foreground); }
+      .bg-destructive { background-color: var(--brand-destructive); }
+      .text-destructive { color: var(--brand-destructive); }
+      .border-destructive { border-color: var(--brand-destructive); }
+      .ring-destructive { --tw-ring-color: var(--brand-destructive); }
+      .bg-destructive-foreground { background-color: var(--brand-destructive-foreground); }
+      .text-destructive-foreground { color: var(--brand-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--brand-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--brand-destructive-foreground); }
+      .bg-border { background-color: var(--brand-border); }
+      .text-border { color: var(--brand-border); }
+      .border-border { border-color: var(--brand-border); }
+      .ring-border { --tw-ring-color: var(--brand-border); }
+      .bg-input { background-color: var(--brand-input); }
+      .text-input { color: var(--brand-input); }
+      .border-input { border-color: var(--brand-input); }
+      .ring-input { --tw-ring-color: var(--brand-input); }
+      .bg-ring { background-color: var(--brand-ring); }
+      .text-ring { color: var(--brand-ring); }
+      .border-ring { border-color: var(--brand-ring); }
+      .ring-ring { --tw-ring-color: var(--brand-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <style id="critical-layout">
+      html, body { height: 100%; margin: 0; overflow: hidden; }
+      .app-shell { display: flex; height: 100vh; }
+      .app-shell__sidebar { width: 220px; flex-shrink: 0; }
+      .app-shell__main { flex: 1; min-width: 0; overflow-y: auto; }
+      .app-shell__main::-webkit-scrollbar { width: 6px; }
+      .app-shell__main::-webkit-scrollbar-track { background: transparent; }
+      .app-shell__main::-webkit-scrollbar-thumb { background: var(--brand-border); border-radius: 3px; }
+      .app-shell__main::-webkit-scrollbar-thumb:hover { background: var(--brand-muted); }
+
+      /* Stat cards */
+      .stat-card { background: var(--brand-card); border-radius: var(--brand-radius-lg); box-shadow: var(--brand-shadow-1); padding: 20px 24px; }
+      .stat-card__value { font-size: 28px; font-weight: 600; line-height: 1.2; }
+      .stat-card__label { font-size: 13px; color: var(--brand-muted); margin-top: 4px; }
+
+      /* Filter pills */
+      .filter-pill { display: inline-flex; align-items: center; padding: 6px 16px; border-radius: var(--brand-radius-pill); font-size: 13px; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; }
+      .filter-pill--active { background: var(--brand-primary); color: var(--brand-primary-foreground); }
+      .filter-pill--inactive { background: transparent; color: var(--brand-muted); border-color: var(--brand-border); }
+      .filter-pill--inactive:hover { color: var(--brand-foreground); border-color: var(--brand-primary); }
+
+      /* Search input */
+      .search-input { width: 240px; padding: 8px 12px 8px 36px; border: 1px solid var(--brand-border); border-radius: var(--brand-radius-md); font-size: 13px; color: var(--brand-foreground); background: var(--brand-card); outline: none; transition: border-color 0.15s; }
+      .search-input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 2px rgba(22,138,173,0.12); }
+      .search-input::placeholder { color: var(--brand-muted-foreground); }
+      .search-wrap { position: relative; display: inline-flex; align-items: center; }
+      .search-wrap .search-icon { position: absolute; left: 10px; color: var(--brand-muted-foreground); pointer-events: none; }
+
+      /* Table */
+      .results-table { width: 100%; border-collapse: collapse; }
+      .results-table th { text-align: left; padding: 10px 16px; font-size: 12px; font-weight: 600; color: var(--brand-muted); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--brand-border); }
+      .results-table td { padding: 0 16px; height: 48px; font-size: 13px; color: var(--brand-foreground); border-bottom: 1px solid var(--brand-border); }
+      .results-table tbody tr:nth-child(even) td { background: rgba(244,247,250,0.5); }
+      .results-table tbody tr:hover td { background: rgba(22,138,173,0.04); }
+      .results-table tbody tr.row-selected td { background: rgba(22,138,173,0.08); }
+
+      /* Status badges */
+      .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--brand-radius-pill); font-size: 12px; font-weight: 500; }
+      .badge--success { background: rgba(22,138,91,0.10); color: var(--brand-state-success); }
+      .badge--warning { background: rgba(214,139,22,0.10); color: var(--brand-state-warning); }
+      .badge--error { background: rgba(217,74,74,0.10); color: var(--brand-state-error); }
+      .badge__dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+      .badge__dot--success { background: var(--brand-state-success); }
+      .badge__dot--warning { background: var(--brand-state-warning); }
+      .badge__dot--error { background: var(--brand-state-error); }
+
+      /* Action links */
+      .action-link { font-size: 13px; color: var(--brand-primary); text-decoration: none; cursor: pointer; transition: color 0.15s; }
+      .action-link:hover { color: var(--brand-primary-hover); text-decoration: underline; }
+      .action-link--muted { color: var(--brand-muted); }
+      .action-link--muted:hover { color: var(--brand-foreground); }
+
+      /* Detail card */
+      .detail-card { background: var(--brand-card); border-radius: var(--brand-radius-lg); box-shadow: var(--brand-shadow-1); padding: 20px 24px; border-left: 3px solid var(--brand-state-warning); }
+      .detail-card__row { display: flex; gap: 8px; margin-bottom: 10px; font-size: 13px; }
+      .detail-card__row:last-child { margin-bottom: 0; }
+      .detail-card__label { color: var(--brand-muted); flex-shrink: 0; min-width: 56px; font-weight: 500; }
+      .detail-card__value { color: var(--brand-foreground); }
+
+      /* Card wrapper */
+      .card { background: var(--brand-card); border-radius: var(--brand-radius-lg); box-shadow: var(--brand-shadow-1); }
+
+      /* Button */
+      .btn-outline { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid var(--brand-border); border-radius: var(--brand-radius-md); font-size: 13px; color: var(--brand-muted); background: var(--brand-card); cursor: pointer; transition: all 0.15s; }
+      .btn-outline:hover { color: var(--brand-state-error); border-color: var(--brand-state-error); }
+      .btn-primary-sm { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; background: var(--brand-primary); color: var(--brand-primary-foreground); border: none; border-radius: var(--brand-radius-md); font-size: 13px; cursor: pointer; transition: background 0.15s; }
+      .btn-primary-sm:hover { background: var(--brand-primary-hover); }
+
+      .section-title { font-size: 14px; font-weight: 600; color: var(--brand-foreground); margin-bottom: 12px; }
+    </style>
+
+    <div class="app-shell">
+      <!-- Sidebar -->
+      <aside class="app-shell__sidebar flex flex-col h-full" style="background-color: var(--brand-sidebar-bg);">
+        <div class="px-5 pt-6 pb-4">
+          <div class="flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-6 h-6" style="color: #168AAD;"></i>
+            <span class="text-base font-semibold" style="color: #FFFFFF;">DocMask</span>
+          </div>
+          <p class="text-xs mt-1" style="color: #667085;">本地文档保护</p>
+        </div>
+        <nav class="flex-1 px-3 space-y-1">
+          <a data-dom-id="nav-workbench" href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors" style="color: #DCE3EA;">
+            <i data-lucide="workflow" class="w-5 h-5"></i> 工作台
+          </a>
+          <a data-dom-id="nav-codebook" href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors" style="color: #DCE3EA;">
+            <i data-lucide="book-open" class="w-5 h-5"></i> 密码本
+          </a>
+          <a data-dom-id="nav-results" href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors" style="background-color: rgba(22,138,173,0.15); color: #168AAD; border-left: 3px solid #168AAD;">
+            <i data-lucide="clipboard-list" class="w-5 h-5"></i> 任务结果
+          </a>
+          <a data-dom-id="nav-settings" href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors" style="color: #DCE3EA;">
+            <i data-lucide="settings" class="w-5 h-5"></i> 设置与帮助
+          </a>
+        </nav>
+        <div class="px-5 py-4 border-t" style="border-color: rgba(255,255,255,0.08);">
+          <div class="flex items-center gap-2 text-xs" style="color: #667085;">
+            <i data-lucide="shield" class="w-3.5 h-3.5"></i> 纯本地运行
+          </div>
+          <p class="text-xs mt-0.5" style="color: #4B5563;">文件不会上传</p>
+          <p class="text-xs mt-1" style="color: #4B5563;">v1.0.0</p>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="app-shell__main" style="background-color: var(--brand-background);">
+        <div style="max-width: 1120px; margin: 0 auto; padding: 32px 40px;">
+
+          <!-- Page Header -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px;">
+            <div>
+              <h1 style="font-size: 22px; font-weight: 700; color: var(--brand-foreground); margin: 0;">任务结果</h1>
+              <p style="font-size: 13px; color: var(--brand-muted); margin: 4px 0 0 0;">查看处理结果、失败原因与覆盖率</p>
+            </div>
+            <button data-dom-id="btn-clear-session" class="btn-outline">
+              <i data-lucide="trash-2" class="w-4 h-4"></i> 清空会话记录
+            </button>
+          </div>
+
+          <!-- Section 1: Stats Summary -->
+          <div class="section-title">处理概览</div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px;">
+            <div class="stat-card">
+              <div class="stat-card__value" style="color: var(--brand-foreground);">8</div>
+              <div class="stat-card__label">总文件</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__value" style="color: var(--brand-state-success);">6</div>
+              <div class="stat-card__label">成功</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__value" style="color: var(--brand-state-error);">2</div>
+              <div class="stat-card__label">失败</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__value" style="color: var(--brand-primary);">1,284</div>
+              <div class="stat-card__label">替换总数</div>
+            </div>
+          </div>
+
+          <!-- Section 2: Filter Bar -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="filter-pill filter-pill--active">全部</span>
+              <span class="filter-pill filter-pill--inactive">成功</span>
+              <span class="filter-pill filter-pill--inactive">冲突</span>
+              <span class="filter-pill filter-pill--inactive">失败</span>
+            </div>
+            <div class="search-wrap">
+              <span class="search-icon"><i data-lucide="search" class="w-4 h-4"></i></span>
+              <input type="text" class="search-input" placeholder="搜索文件名……">
+            </div>
+          </div>
+
+          <!-- Section 3: Results Table -->
+          <div class="card" style="margin-bottom: 24px; overflow: hidden;">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th style="width: 22%;">文件名</th>
+                  <th style="width: 12%;">操作</th>
+                  <th style="width: 16%;">状态</th>
+                  <th style="width: 12%;">替换数</th>
+                  <th style="width: 26%;">输出文件</th>
+                  <th style="width: 12%;">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="font-weight: 500;">合同.docx</td>
+                  <td>脱敏</td>
+                  <td><span class="badge badge--success"><span class="badge__dot badge__dot--success"></span> 完成</span></td>
+                  <td>128</td>
+                  <td style="color: var(--brand-muted);">合同_desensitized.docx</td>
+                  <td><span class="action-link">打开目录</span></td>
+                </tr>
+                <tr class="row-selected">
+                  <td style="font-weight: 500;">名单.txt</td>
+                  <td>脱敏</td>
+                  <td><span class="badge badge--warning"><span class="badge__dot badge__dot--warning"></span> 冲突</span></td>
+                  <td style="color: var(--brand-muted-foreground);">—</td>
+                  <td style="color: var(--brand-muted-foreground);">—</td>
+                  <td><span class="action-link action-link--muted">查看原因</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 500;">归档.doc</td>
+                  <td>恢复</td>
+                  <td><span class="badge badge--error"><span class="badge__dot badge__dot--error"></span> 失败</span></td>
+                  <td style="color: var(--brand-muted-foreground);">0</td>
+                  <td style="color: var(--brand-muted-foreground);">—</td>
+                  <td><span class="action-link action-link--muted">查看原因</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 500;">报告.docx</td>
+                  <td>脱敏</td>
+                  <td><span class="badge badge--success"><span class="badge__dot badge__dot--success"></span> 完成</span></td>
+                  <td>356</td>
+                  <td style="color: var(--brand-muted);">报告_desensitized.docx</td>
+                  <td><span class="action-link">打开目录</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 500;">简历.docx</td>
+                  <td>恢复</td>
+                  <td><span class="badge badge--success"><span class="badge__dot badge__dot--success"></span> 完成</span></td>
+                  <td>42</td>
+                  <td style="color: var(--brand-muted);">简历_restored.docx</td>
+                  <td><span class="action-link">打开目录</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 500;">协议.txt</td>
+                  <td>脱敏</td>
+                  <td><span class="badge badge--success"><span class="badge__dot badge__dot--success"></span> 完成</span></td>
+                  <td>15</td>
+                  <td style="color: var(--brand-muted);">协议_desensitized.txt</td>
+                  <td><span class="action-link">打开目录</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Section 4: File Detail Panel -->
+          <div class="section-title">文件详情</div>
+          <div class="detail-card">
+            <div class="detail-card__row">
+              <span class="detail-card__label">状态</span>
+              <span class="detail-card__value">
+                <span class="badge badge--warning"><span class="badge__dot badge__dot--warning"></span> 冲突</span>
+              </span>
+            </div>
+            <div class="detail-card__row">
+              <span class="detail-card__label">原因</span>
+              <span class="detail-card__value">文档中已自然存在密码本脱敏词，已阻止执行。</span>
+            </div>
+            <div class="detail-card__row">
+              <span class="detail-card__label">建议</span>
+              <span class="detail-card__value">修改密码本中的冲突脱敏词后重试。</span>
+            </div>
+            <div style="margin-top: 14px;">
+              <button class="btn-primary-sm">
+                <i data-lucide="plus" class="w-4 h-4"></i> 重新添加到工作台
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </main>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

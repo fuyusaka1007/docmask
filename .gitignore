@@ -1,0 +1,90 @@
+# ===== 敏感文件 / 客户数据（切勿上传）=====
+# 根目录的测试文档（含真实客户数据）
+/测试文档.doc
+/测试文档.docx
+/测试文档3长篇幅.docx
+/东莞宝康_v2草稿.docx
+/东莞宝康_v2草稿_desensitized.docx
+# 根目录的密码本（含真实脱敏映射）
+/codebook.txt
+# 测试反馈输出
+/feedback.txt
+# 运行日志
+/docmask.log
+*.log
+
+# ===== 测试产物（含真实数据 / 体积大）=====
+test-artifacts/
+.uploads/
+
+# ===== PyInstaller 构建产物 =====
+build/
+dist/
+*.spec
+
+# ===== Python 缓存与虚拟环境 =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ===== 测试运行时环境（体积大，非源码）=====
+.test_runtime/
+
+# ===== pytest 缓存 =====
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# ===== IDE / 编辑器 =====
+.trae/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ===== 分发与打包中间文件 =====
+*.egg
+*.egg-info/
+.eggs/
+develop-eggs/
+sdist/
+wheels/
+pip-wheel-metadata/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ===== 类型检查 =====
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# ===== 文档生成 =====
+_build/
+
+# ===== 本地配置（如有）=====
+*.local
+.env
+.env.*

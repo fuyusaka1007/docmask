@@ -1,0 +1,175 @@
+{
+  "success": true,
+  "outcome": "passed",
+  "repairable": true,
+  "terminalViolations": [],
+  "terminalBlockingSummary": null,
+  "skillProvenance": {
+    "name": "solo-design",
+    "version": "2026.07.22.00.00.00",
+    "version_source": "skill-release-manifest.json",
+    "runtime_skill_dir": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+    "recorded_at": null,
+    "expected_version": "2026.07.22.00.00.00",
+    "status": "manifest_fallback",
+    "read_status": "ok",
+    "reason": "runtime-orchestration-summary.json missing skillProvenance; used skill-release-manifest.json"
+  },
+  "operatingMode": "free-explore",
+  "renderBlockingErrorCount": 0,
+  "softWarningCount": 12,
+  "renderBlockingErrors": [],
+  "errorSignatures": [],
+  "softWarnings": [
+    "[html-head-style] settings.html: found 1 custom <style> block(s) in <head>. The <head> is owned by apply-html-head-contract.mjs; move custom styles before </body> or re-run apply-html-head-contract.mjs <css-path> <html-file> --replace-head to relocate them.",
+    "[orchestration-summary] runtime-orchestration-summary.json is missing skillProvenance.name/version/version_source. Version provenance will be reported as observed_unknown by external evaluators.",
+    "[html-quality] colors_and_type.css: free-explore brand CSS must use one primary hue only; forbidden secondary/accent brand variables found (--brand-secondary, --brand-secondary-foreground, --brand-accent, --brand-accent-foreground). Use --state-success/warning/error/info only for semantic states.",
+    "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--brand-shadow-2: 0 8px 24px -8px rgba(15, 23, 42, 0.18), --brand-shadow-3: 0 24px 60px -20px rgba(15, 23, 42, 0.30)).",
+    "[html-quality] codebook.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] codebook.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] results.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] results.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] settings.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] settings.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] workbench.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] workbench.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states."
+  ],
+  "repairPlanHints": [
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "codebook.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "results.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "settings.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "workbench.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    }
+  ],
+  "repairActionTable": [],
+  "errorCount": 0,
+  "warningCount": 12,
+  "errors": [],
+  "warnings": [
+    "[html-head-style] settings.html: found 1 custom <style> block(s) in <head>. The <head> is owned by apply-html-head-contract.mjs; move custom styles before </body> or re-run apply-html-head-contract.mjs <css-path> <html-file> --replace-head to relocate them.",
+    "[orchestration-summary] runtime-orchestration-summary.json is missing skillProvenance.name/version/version_source. Version provenance will be reported as observed_unknown by external evaluators.",
+    "[html-quality] colors_and_type.css: free-explore brand CSS must use one primary hue only; forbidden secondary/accent brand variables found (--brand-secondary, --brand-secondary-foreground, --brand-accent, --brand-accent-foreground). Use --state-success/warning/error/info only for semantic states.",
+    "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--brand-shadow-2: 0 8px 24px -8px rgba(15, 23, 42, 0.18), --brand-shadow-3: 0 24px 60px -20px rgba(15, 23, 42, 0.30)).",
+    "[html-quality] codebook.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] codebook.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] results.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] results.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] settings.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] settings.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states.",
+    "[html-quality] workbench.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] workbench.html: free-explore pages must not use secondary/accent brand variables. Use the single primary hue, neutral tints, or --state-success/warning/error/info for real semantic states."
+  ],
+  "validationRunDisciplineStatus": {
+    "declared": true,
+    "restoreMode": false,
+    "maxFullValidationRuns": 2,
+    "validationHistoryCount": 0,
+    "repairLedgerCount": 0,
+    "softWarningsTriggerRepair": false,
+    "terminalState": null,
+    "nextAction": null,
+    "violations": [],
+    "success": true
+  },
+  "terminalState": null,
+  "nextCheck": {
+    "type": "finish-readiness",
+    "command": "node \"c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\" --check=all",
+    "fullValidationAllowed": false,
+    "reason": "workspace validation passed; run complete finish readiness before final delivery"
+  },
+  "repairBatch": [],
+  "repairContextPacket": {
+    "schema_version": "1.0",
+    "purpose": "small-context repair packet; read this before full validation-report.json",
+    "success": true,
+    "terminalState": null,
+    "skillProvenance": {
+      "name": "solo-design",
+      "version": "2026.07.22.00.00.00",
+      "version_source": "skill-release-manifest.json",
+      "runtime_skill_dir": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+      "recorded_at": null,
+      "expected_version": "2026.07.22.00.00.00",
+      "status": "manifest_fallback",
+      "read_status": "ok",
+      "reason": "runtime-orchestration-summary.json missing skillProvenance; used skill-release-manifest.json"
+    },
+    "renderBlockingErrorCount": 0,
+    "softWarningCount": 12,
+    "renderBlockingErrors": [],
+    "repairActionTable": [],
+    "nextCheck": {
+      "type": "finish-readiness",
+      "command": "node \"c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\" --check=all",
+      "fullValidationAllowed": false,
+      "reason": "workspace validation passed; run complete finish readiness before final delivery"
+    },
+    "forbidden": [
+      "do not read validator source",
+      "do not rerun full validation when nextCheck.fullValidationAllowed=false",
+      "do not start preview/browser unless user explicitly asks",
+      "do not hand-edit repair ledger fields"
+    ]
+  },
+  "projectFileHashes": {
+    "docmask-ui.design": "2709cbe5e39a342b2ed4007f3e7096010df9fe0e4e15b602337ce67ab998719c",
+    "colors_and_type.css": "01b68405c31077b94ce93730ea191bc418a2a2c7eda9d6b0b668d84c90527d6b",
+    "runtime-orchestration-summary.json": "711ac661275d1fc35cfe59916f03f30067bcf1dded3bfd4d363308caad78e259",
+    "pages/codebook.html": "e01d5a8b9cb2e9b081a0ee4a8642ef28caadc49e7beedc7322978fc86d1bb738",
+    "pages/results.html": "e7d46b6fd698d93eb035fe95e72b4d1dffa3844975212d0324f7fd7b586f87db",
+    "pages/settings.html": "a34b3975ab829865a521e908b22f5624221364d04105aa75cd31da0a3c460b0a",
+    "pages/workbench.html": "e1af66bbdbe1039cfaff327643609df01bd38548d8e4596ece2cdafa4705422e"
+  },
+  "designDir": "c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design",
+  "expectedPages": 4,
+  "requireInteractions": null,
+  "checkedAt": "2026-07-29T09:27:03.547Z"
+}

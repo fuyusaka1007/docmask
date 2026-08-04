@@ -1,0 +1,17 @@
+# 核心依赖
+python-docx>=1.0
+chardet>=5.0
+lxml>=4.9
+
+# Windows Microsoft Word .doc 转换（非 Windows 平台自动跳过）
+pywin32>=306; sys_platform == "win32"
+
+# UI 依赖
+customtkinter>=6.0.0
+darkdetect>=0.8.0
+
+# 拖放支持（可选，未安装时自动降级为仅按钮添加）
+tkinterdnd2>=0.4.2
+
+# 打包分发（可选）
+pyinstaller>=6.0

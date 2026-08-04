@@ -1,0 +1,735 @@
+{
+  "pages": [
+    {
+      "nodeId": "page-workbench",
+      "htmlSrc": "pages/workbench.html",
+      "title": "工作台",
+      "deviceType": "desktop"
+    },
+    {
+      "nodeId": "page-codebook",
+      "htmlSrc": "pages/codebook.html",
+      "title": "密码本",
+      "deviceType": "desktop"
+    },
+    {
+      "nodeId": "page-results",
+      "htmlSrc": "pages/results.html",
+      "title": "任务结果",
+      "deviceType": "desktop"
+    },
+    {
+      "nodeId": "page-settings",
+      "htmlSrc": "pages/settings.html",
+      "title": "设置与帮助",
+      "deviceType": "desktop"
+    }
+  ],
+  "project": {
+    "resolvedLane": "free_exploration",
+    "deviceType": "desktop",
+    "selectedIntentWorkflowRead": true,
+    "contextRequirementsLoaded": [
+      {
+        "path": "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/page-rendering-quality-gate.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/design-artifact-validation.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/delivery-evidence-contract.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "visual-experience/visual-experience-guidelines.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      }
+    ],
+    "contextReadScope": {
+      "mainAgent": {
+        "forbiddenReads": [
+          "other intent-workflows/**",
+          "Sub-Agent implementation files before dispatch"
+        ]
+      },
+      "pageSubAgent": {
+        "allowedReads": [
+          "current lane page runtime guide",
+          "current lane dispatch contract excerpt",
+          "current Page Packet",
+          "supplementaryReads[] only"
+        ],
+        "forbiddenReads": [
+          "SKILL.md full re-read",
+          "other intent-workflows/**",
+          "full runtime-orchestration-summary.json unless explicitly sliced"
+        ]
+      },
+      "readScopeLedgerWriter": "shared-runtime/deterministic-tooling/build-page-dispatch-manifest.mjs"
+    },
+    "validationRunDiscipline": {
+      "maxFullValidationRuns": 2,
+      "softWarningsTriggerRepair": false,
+      "blockingRepairMode": "targeted-once",
+      "forbiddenRepairTriggers": [
+        "soft-warning-only",
+        "provenance-warning-only",
+        "style-warning-only"
+      ]
+    },
+    "lowValueCallWatchdog": {
+      "applies": true,
+      "noProgressSignals": [
+        "no_tool_call",
+        "no_artifact_diff",
+        "no_structured_decision"
+      ],
+      "noProgressNextAction": "enter_readiness_or_blocked_summary"
+    },
+    "intentProfile": {
+      "caseFamily": "free_exploration",
+      "routingReason": "P11: no Library, no restore target, open-ended desktop UI creation"
+    },
+    "cssPreflightEvidence": {
+      "applies": true,
+      "status": "passed",
+      "command": "node apply-html-head-contract.mjs colors_and_type.css .preflight/preflight.html --title=Preflight --lang=zh --prefix=brand",
+      "brandPrefix": "brand",
+      "checks": {
+        "themeVars": "present",
+        "semanticTokenFallback": "present",
+        "themeInline": "present",
+        "tailwindCdn": "present",
+        "htmlClass": "present",
+        "semanticMappings": "resolved"
+      },
+      "retryCount": 0,
+      "blockingReason": null
+    },
+    "pageCompletenessGate": {
+      "expectedPages": [
+        "workbench",
+        "codebook",
+        "results",
+        "settings"
+      ],
+      "requiredStates": [
+        "workbench-ready",
+        "workbench-processing",
+        "workbench-conflict",
+        "codebook-valid",
+        "codebook-error",
+        "results-completed",
+        "results-empty",
+        "settings-default"
+      ],
+      "requiredInteractions": [
+        "sidebar-nav",
+        "mode-switch",
+        "file-add",
+        "precheck-execute",
+        "stop-task"
+      ],
+      "requiredNavigation": [
+        "sidebar",
+        "page-switch"
+      ],
+      "missingAllowed": []
+    },
+    "styleContinuityAnchors": [
+      "sidebar",
+      "page-header",
+      "card-radius",
+      "status-colors",
+      "typography-scale"
+    ],
+    "creativeRecipe": {
+      "businessTone": "工具/安全/可信",
+      "layoutArchetype": "app-shell-sidebar",
+      "visualSignature": "低饱和蓝灰 + 青蓝主色，卡片式分组，状态色表达风险",
+      "densityTarget": "balanced",
+      "avoidOneThing": "避免黑客终端风格或高饱和霓虹色"
+    },
+    "sharedProjectShellContract": {
+      "sidebar": {
+        "width": "220px",
+        "bgColor": "var(--brand-sidebar-bg)",
+        "navItems": [
+          {
+            "key": "workbench",
+            "label": "工作台",
+            "icon": "workflow",
+            "active": true
+          },
+          {
+            "key": "codebook",
+            "label": "密码本",
+            "icon": "book-open",
+            "active": false
+          },
+          {
+            "key": "results",
+            "label": "任务结果",
+            "icon": "clipboard-list",
+            "active": false
+          },
+          {
+            "key": "settings",
+            "label": "设置与帮助",
+            "icon": "settings",
+            "active": false
+          }
+        ]
+      }
+    },
+    "dispatchPreflightManifest": [
+      {
+        "recorded_at": "2026-07-29T09:17:58.609Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "FreePagePacket",
+        "laneContract": {
+          "resolvedLane": "free_exploration",
+          "packetType": "FreePagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "nodeId": "page-workbench",
+        "htmlSrc": "pages/workbench.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/workbench.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/workbench.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\" --node-id=\"page-workbench\" --html-src=\"pages/workbench.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\colors_and_type.css",
+        "htmlFilePath": "c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\pages\\workbench.html",
+        "brandPrefix": "brand",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\colors_and_type.css\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\pages\\workbench.html\" --title=\"工作台\" --lang=\"zh-CN\" --prefix=\"brand\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": null,
+        "completionSchemaExpected": "compact",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "docmask-ui.design": "2709cbe5e39a342b2ed4007f3e7096010df9fe0e4e15b602337ce67ab998719c"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": false,
+          "appliesToThisPage": false,
+          "canonicalHtmlIncluded": false,
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-07-29T09:17:58.609Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "FreePagePacket",
+        "laneContract": {
+          "resolvedLane": "free_exploration",
+          "packetType": "FreePagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "nodeId": "page-codebook",
+        "htmlSrc": "pages/codebook.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/codebook.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/codebook.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\" --node-id=\"page-codebook\" --html-src=\"pages/codebook.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\colors_and_type.css",
+        "htmlFilePath": "c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\pages\\codebook.html",
+        "brandPrefix": "brand",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\colors_and_type.css\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\pages\\codebook.html\" --title=\"密码本\" --lang=\"zh-CN\" --prefix=\"brand\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": null,
+        "completionSchemaExpected": "compact",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "docmask-ui.design": "2709cbe5e39a342b2ed4007f3e7096010df9fe0e4e15b602337ce67ab998719c"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": false,
+          "appliesToThisPage": false,
+          "canonicalHtmlIncluded": false,
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-07-29T09:17:58.609Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "FreePagePacket",
+        "laneContract": {
+          "resolvedLane": "free_exploration",
+          "packetType": "FreePagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "nodeId": "page-results",
+        "htmlSrc": "pages/results.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/results.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/results.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\" --node-id=\"page-results\" --html-src=\"pages/results.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\colors_and_type.css",
+        "htmlFilePath": "c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\pages\\results.html",
+        "brandPrefix": "brand",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\colors_and_type.css\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\pages\\results.html\" --title=\"任务结果\" --lang=\"zh-CN\" --prefix=\"brand\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": null,
+        "completionSchemaExpected": "compact",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "docmask-ui.design": "2709cbe5e39a342b2ed4007f3e7096010df9fe0e4e15b602337ce67ab998719c"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": false,
+          "appliesToThisPage": false,
+          "canonicalHtmlIncluded": false,
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-07-29T09:17:58.609Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "FreePagePacket",
+        "laneContract": {
+          "resolvedLane": "free_exploration",
+          "packetType": "FreePagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "nodeId": "page-settings",
+        "htmlSrc": "pages/settings.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/settings.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/settings.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\" --node-id=\"page-settings\" --html-src=\"pages/settings.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\colors_and_type.css",
+        "htmlFilePath": "c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\pages\\settings.html",
+        "brandPrefix": "brand",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\Administrator\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\colors_and_type.css\" \"c:\\Users\\Administrator\\Desktop\\脱敏解密程序\\docmask-ui.design\\pages\\settings.html\" --title=\"设置与帮助\" --lang=\"zh-CN\" --prefix=\"brand\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": null,
+        "completionSchemaExpected": "compact",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "docmask-ui.design": "2709cbe5e39a342b2ed4007f3e7096010df9fe0e4e15b602337ce67ab998719c"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": false,
+          "appliesToThisPage": false,
+          "canonicalHtmlIncluded": false,
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      }
+    ],
+    "readScopeLedger": [
+      {
+        "actor": "page-sub-agent",
+        "lane": "free_exploration",
+        "path": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "reason": "page runtime guide",
+        "scopeClass": "page-runtime",
+        "declaredBeforeRead": true,
+        "recordedAt": "2026-07-29T09:17:58.609Z",
+        "nodeId": "page-workbench",
+        "htmlSrc": "pages/workbench.html"
+      },
+      {
+        "actor": "page-sub-agent",
+        "lane": "free_exploration",
+        "path": "intent-workflows/intent-page-free-exploration/dispatch-contract.md",
+        "reason": "dispatch contract",
+        "scopeClass": "dispatch-contract",
+        "declaredBeforeRead": true,
+        "recordedAt": "2026-07-29T09:17:58.609Z",
+        "nodeId": "page-workbench",
+        "htmlSrc": "pages/workbench.html"
+      }
+    ],
+    "expectedDispatches": [
+      {
+        "nodeId": "page-workbench",
+        "pageId": "page-workbench",
+        "targetPageId": "page-workbench",
+        "htmlSrc": "pages/workbench.html",
+        "packetType": "FreePagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/workbench.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "workbench-ok",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-07-29T09:26:13.349Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-codebook",
+        "pageId": "page-codebook",
+        "targetPageId": "page-codebook",
+        "htmlSrc": "pages/codebook.html",
+        "packetType": "FreePagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/codebook.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "codebook-ok",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-07-29T09:26:32.308Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-results",
+        "pageId": "page-results",
+        "targetPageId": "page-results",
+        "htmlSrc": "pages/results.html",
+        "packetType": "FreePagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/results.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "results-ok",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-07-29T09:26:32.433Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-settings",
+        "pageId": "page-settings",
+        "targetPageId": "page-settings",
+        "htmlSrc": "pages/settings.html",
+        "packetType": "FreePagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/settings.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "settings-ok",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-07-29T09:26:32.554Z",
+        "source": "record-dispatch-completion.mjs"
+      }
+    ],
+    "mainAgentPostDispatchMutations": []
+  }
+}
