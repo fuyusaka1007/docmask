@@ -4,6 +4,42 @@
 
 ---
 
+## 下载预编译版本
+
+### Windows
+
+从 [GitHub Releases](https://github.com/fuyusaka1007/docmask/releases) 下载 Windows 版本：
+
+| 文件 | 说明 |
+|------|------|
+| `docmask-cli.exe` | 命令行可执行文件 |
+| `docmask-ui.exe` | GUI 可执行文件，双击运行 |
+
+```powershell
+# CLI 示例
+.\docmask-cli.exe check -c codebook.txt
+.\docmask-cli.exe mask -c codebook.txt -i input.docx -o output.docx
+
+# GUI 直接双击运行
+.\docmask-ui.exe
+```
+
+### macOS
+
+从 [GitHub Releases](https://github.com/fuyusaka1007/docmask/releases) 下载 macOS 版本：
+
+| 文件 | 说明 |
+|------|------|
+| `docmask-cli` | 命令行可执行文件 |
+| `docmask-ui` | GUI 可执行文件 |
+| `docmask-ui-macos.app.zip` | GUI 应用包（.app） |
+
+```bash
+chmod +x docmask-cli docmask-ui
+./docmask-cli mask -c codebook.txt -i input.docx -o output.docx
+./docmask-ui
+```
+
 ## 快速开始
 
 ### 1. 安装依赖
