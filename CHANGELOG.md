@@ -44,6 +44,14 @@
 - 线程安全的任务取消机制
 - 日志不记录具体替换内容
 
+### Windows 版本
+
+- 已提供 Windows 预编译可执行文件：
+  - `docmask-cli.exe` — 命令行可执行文件（约 16 MB）
+  - `docmask-ui.exe` — GUI 可执行文件（约 27 MB）
+- Windows 版本由 `build_windows.ps1` 在 Windows 10/11 上构建
+- 修复了 `build_windows.ps1` 中 `--add-data` 相对路径在 PyInstaller workpath 下解析失败的问题
+
 ### 已知问题
 
 - macOS 触控板在某些页面滚动时偶有跳动（CTkScrollableFrame 多实例全局绑定冲突）
