@@ -20,6 +20,9 @@ Set-Location $projectRoot
 Remove-Item -Recurse -Force build, dist, *.egg-info -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path dist | Out-Null
 
+# 计算 assets 绝对路径（PyInstaller --add-data 需要相对 workpath 的正确路径）
+$assetsSrc = Join-Path $projectRoot "docmask\ui\assets"
+
 Write-Host "=== Building docmask-cli (Windows) ===" -ForegroundColor Cyan
 python -m PyInstaller --onefile --name docmask-cli --noconfirm `
     --hidden-import lxml --hidden-import chardet `
@@ -32,7 +35,7 @@ Write-Host "=== Building docmask-ui (Windows) ===" -ForegroundColor Cyan
 python -m PyInstaller --onefile --windowed --name docmask-ui --noconfirm `
     --hidden-import customtkinter --hidden-import darkdetect `
     --hidden-import lxml --hidden-import chardet --hidden-import PIL `
-    --add-data "docmask\ui\assets;docmask\ui\assets" `
+    --add-data "$assetsSrc;docmask\ui\assets" `
     --distpath dist --workpath build/ui --specpath build/ui `
     docmask_ui.py
 
