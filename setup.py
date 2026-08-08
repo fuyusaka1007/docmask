@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="docmask",
-    version="0.1.0-beta.1",
+    version="0.1.0-beta.2",
     description="文档脱敏工具 - 离线可逆的文档敏感信息替换工具",
     packages=find_packages(),
     python_requires=">=3.10",

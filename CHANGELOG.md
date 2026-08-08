@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.0-beta.2 (2026-08-08)
+
+### 修复
+
+- **macOS 触控板滚动弹跳修复**：到达滚动边界后，触摸板动量噪声产生的反向小 delta（-1/-2）会导致视图反复弹跳。新增边界锁机制：到达边界后 200ms 内抑制反方向小 delta（< 3 units），每次正 delta 被边界拦截时刷新锁计时器。大幅主动滚动（>= 3 units）不受锁限制
+- **滚动诊断增强**：`_on_content_configure` / `_on_canvas_configure` 新增诊断记录，捕获 Configure 事件的 yview 变化，用于排查反馈环
+
+### 变更
+
+- `scroll_frame.py` 新增 `_BOUNDARY_LOCK_MS` / `_BOUNDARY_LOCK_THRESHOLD` 常量和 `_boundary_lock_dir` / `_boundary_lock_until` 状态
+- `scroll_frame.py` 新增 `boundary_lock_suppressed` 诊断事件类型
+- Windows 打包脚本 `build_windows.ps1` 修复了 `--add-data` 相对路径问题（来自 ad59a73）
+
 ## v0.1.0-beta.1 (2026-08-04)
 
 第一个测试版本，供小范围用户试用。
@@ -54,7 +67,7 @@
 
 ### 已知问题
 
-- macOS 触控板在某些页面滚动时偶有跳动（CTkScrollableFrame 多实例全局绑定冲突）
+- macOS 触控板滚动边界弹跳已在 beta.2 修复（边界锁机制）
 
 ### 技术变更摘要
 

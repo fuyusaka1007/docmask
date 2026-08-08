@@ -19,6 +19,12 @@ _COALESCE_MS = 16
 # 边界 epsilon：防止浮点精度导致 0.9999↔1.0 反复触发边界
 _BOUNDARY_EPS = 0.001
 
+# 边界锁：到达边界后，在此时长内抑制反方向小 delta（毫秒）
+_BOUNDARY_LOCK_MS = 200
+
+# 边界锁期间，反方向 delta 低于此值被抑制
+_BOUNDARY_LOCK_THRESHOLD = 3
+
 
 class PageScrollFrame(ctk.CTkFrame):
     """基于 Canvas 的滚动容器。
@@ -79,6 +85,10 @@ class PageScrollFrame(ctk.CTkFrame):
         self._pending_delta = 0.0
         self._scroll_job: str | None = None
 
+        # 边界锁状态：0=无, +1=底部锁(抑制上滑), -1=顶部锁(抑制下滑)
+        self._boundary_lock_dir = 0
+        self._boundary_lock_until = 0.0
+
         # 全局滚轮路由（只注册一次）
         self.__class__._bind_wheel_global()
 
@@ -118,20 +128,42 @@ class PageScrollFrame(ctk.CTkFrame):
         h = event.height
         if h == self._last_content_height:
             return
+        old_h = self._last_content_height
         self._last_content_height = h
+        y_before = list(self._canvas.yview())
         self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        y_after = list(self._canvas.yview())
+        scroll_diag.record(
+            source="content_configure",
+            old_height=old_h,
+            new_height=h,
+            y_before=y_before,
+            y_after=y_after,
+            frame_id=id(self),
+        )
 
     def _on_canvas_configure(self, event):
         """Canvas 尺寸变化时同步内容宽度。
 
         只在宽度实际变化时更新，避免反馈环：
-        宽度变 → 文本重排 → 高度变 → scrollregion 变 → yview 跳。
+        宽度变 -> 文本重排 -> 高度变 -> scrollregion 变 -> yview 跳。
         """
         w = event.width
         if w == self._last_content_width:
             return
+        old_w = self._last_content_width
         self._last_content_width = w
+        y_before = list(self._canvas.yview())
         self._canvas.itemconfigure("content", width=w)
+        y_after = list(self._canvas.yview())
+        scroll_diag.record(
+            source="canvas_configure",
+            old_width=old_w,
+            new_width=w,
+            y_before=y_before,
+            y_after=y_after,
+            frame_id=id(self),
+        )
 
     # ---- 全局滚轮路由 ----
 
@@ -243,10 +275,35 @@ class PageScrollFrame(ctk.CTkFrame):
             # delta 太小但非零，保留方向
             units = 1 if delta > 0 else -1
 
+        now = time.monotonic()
+        lock_active = self._boundary_lock_dir != 0 and now < self._boundary_lock_until
+
+        # 边界锁：抑制反方向小 delta（触摸板动量噪声）
+        if lock_active:
+            if self._boundary_lock_dir > 0 and units < 0 and abs(units) < _BOUNDARY_LOCK_THRESHOLD:
+                scroll_diag.record(
+                    source="boundary_lock_suppressed",
+                    boundary="bottom", suppressed_units=units,
+                    frame_id=id(self),
+                )
+                return
+            if self._boundary_lock_dir < 0 and units > 0 and abs(units) < _BOUNDARY_LOCK_THRESHOLD:
+                scroll_diag.record(
+                    source="boundary_lock_suppressed",
+                    boundary="top", suppressed_units=units,
+                    frame_id=id(self),
+                )
+                return
+        elif self._boundary_lock_dir != 0:
+            # 锁已过期
+            self._boundary_lock_dir = 0
+
         top, bottom = self._canvas.yview()
 
         # 边界检查（带 epsilon 防止浮点精度反复触发）
         if units < 0 and top <= _BOUNDARY_EPS:
+            self._boundary_lock_dir = -1
+            self._boundary_lock_until = now + _BOUNDARY_LOCK_MS / 1000.0
             scroll_diag.record(
                 source="boundary", boundary="top",
                 attempted_units=units, y_view=(top, bottom),
@@ -254,6 +311,8 @@ class PageScrollFrame(ctk.CTkFrame):
             )
             return
         if units > 0 and bottom >= 1 - _BOUNDARY_EPS:
+            self._boundary_lock_dir = 1
+            self._boundary_lock_until = now + _BOUNDARY_LOCK_MS / 1000.0
             scroll_diag.record(
                 source="boundary", boundary="bottom",
                 attempted_units=units, y_view=(top, bottom),
