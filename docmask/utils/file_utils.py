@@ -128,7 +128,11 @@ def resolve_output_path(
 
 @contextmanager
 def staged_output_path(final_path: str) -> Iterator[str]:
-    """在目标同目录写临时文件，成功后以不覆盖方式提交。"""
+    """在目标同目录写临时文件，成功后以不覆盖方式提交。
+
+    A-04: 硬链接不支持时（FAT/部分 SMB/企业策略目录）安全回退到
+    O_CREAT|O_EXCL + 复制 + fsync，绝不使用无条件 os.replace。
+    """
     final = Path(final_path)
     final.parent.mkdir(parents=True, exist_ok=True)
     if final.exists():
@@ -143,10 +147,69 @@ def staged_output_path(final_path: str) -> Iterator[str]:
         yield str(temp)
         if not temp.is_file():
             raise OSError("处理器未生成临时输出文件")
-        # hard-link 创建目标是原子的，且目标已存在时必然失败，不会覆盖。
-        os.link(temp, final)
+        _commit_no_replace(temp, final)
     finally:
         try:
             temp.unlink()
         except FileNotFoundError:
             pass
+
+
+def _commit_no_replace(temp: Path, final: Path) -> None:
+    """以不覆盖方式将临时文件提交为最终文件。
+
+    优先硬链接（原子且目标已存在时必然失败）；不支持硬链接的文件系统
+    回退到 O_CREAT|O_EXCL + 复制 + fsync。两种路径都保证不覆盖已有文件。
+    """
+    # 路径 1：硬链接（原子，目标已存在时失败）
+    try:
+        os.link(temp, final)
+        return
+    except FileExistsError:
+        raise  # 目标已存在，拒绝覆盖
+    except OSError:
+        pass  # 不支持硬链接（EPERM/ENOSYS/EACCES 等），走回退
+
+    # 路径 2：O_CREAT|O_EXCL + 复制 + fsync（跨平台不覆盖保证）
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY
+    fd = None
+    try:
+        fd = os.open(str(final), flags)
+        with open(temp, "rb") as src, os.fdopen(fd, "wb") as dst:
+            fd = None  # os.fdown 已接管 fd
+            while True:
+                chunk = src.read(1024 * 1024)
+                if not chunk:
+                    break
+                dst.write(chunk)
+            dst.flush()
+            os.fsync(dst.fileno())
+        _fsync_dir(final.parent)
+    except FileExistsError:
+        raise  # 目标已存在，拒绝覆盖
+    except Exception:
+        # 写入失败：清理可能已创建的不完整目标文件
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        try:
+            final.unlink()
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def _fsync_dir(path: Path) -> None:
+    """fsync 目录以确保文件系统元数据（目录条目）持久化。"""
+    try:
+        dir_fd = os.open(str(path), os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except OSError:
+        pass  # 某些平台不支持目录 fsync，忽略

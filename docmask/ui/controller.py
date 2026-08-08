@@ -301,14 +301,23 @@ class TaskController:
             self._event_queue.put((callback, args))
 
     def process_pending_events(self) -> int:
-        """在主线程执行当前队列中的回调，返回执行数量。"""
+        """在主线程执行当前队列中的回调，返回执行数量。
+
+        A-06: 每个回调独立 try/except Exception，单个回调异常不阻断后续事件排空。
+        BaseException（KeyboardInterrupt/SystemExit）不被吞掉。
+        """
         processed = 0
         while True:
             try:
                 callback, args = self._event_queue.get_nowait()
             except queue.Empty:
                 break
-            callback(*args)
+            try:
+                callback(*args)
+            except Exception:
+                logger.exception(
+                    "UI 回调异常已隔离，继续排空事件队列: %s", callback.__name__
+                )
             processed += 1
         return processed
 

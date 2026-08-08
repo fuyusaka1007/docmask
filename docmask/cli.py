@@ -101,6 +101,7 @@ def cmd_mask(args) -> int:
     total_replacements = 0
     all_hits: dict[str, int] = {}
     failures: list[tuple[str, str]] = []
+    interrupted = False
     batch_mode = Path(input_path).is_dir() or len(files) > 1
 
     if batch_mode and args.output and Path(args.output).exists() and not Path(args.output).is_dir():
@@ -135,6 +136,7 @@ def cmd_mask(args) -> int:
 
         except KeyboardInterrupt:
             print("\n用户中断操作。")
+            interrupted = True
             break
         except MaskConflictError as e:
             print(f"[冲突] {filepath}:")
@@ -149,7 +151,12 @@ def cmd_mask(args) -> int:
 
     # 汇总
     print()
-    print(f"脱敏完成: 成功 {success_count} 个, 失败 {fail_count} 个, 共替换 {total_replacements} 处")
+    if interrupted:
+        unprocessed = len(files) - success_count - fail_count
+        print(f"脱敏已中断: 成功 {success_count} 个, 失败 {fail_count} 个, "
+              f"未处理 {unprocessed} 个, 共替换 {total_replacements} 处")
+    else:
+        print(f"脱敏完成: 成功 {success_count} 个, 失败 {fail_count} 个, 共替换 {total_replacements} 处")
     if failures:
         print("失败详情:")
         for fp, err in failures:
@@ -162,6 +169,8 @@ def cmd_mask(args) -> int:
         print("隐私安全覆盖率报告（不含原文、替换值和正则内容）:")
         print(json.dumps(report, ensure_ascii=False, indent=2))
 
+    if interrupted:
+        return 130
     return 1 if fail_count > 0 else 0
 
 
@@ -186,6 +195,7 @@ def cmd_restore(args) -> int:
     fail_count = 0
     total_replacements = 0
     failures: list[tuple[str, str]] = []
+    interrupted = False
     batch_mode = Path(input_path).is_dir() or len(files) > 1
 
     if batch_mode and args.output and Path(args.output).exists() and not Path(args.output).is_dir():
@@ -196,7 +206,7 @@ def cmd_restore(args) -> int:
         try:
             handler, fmt = get_handler(filepath)
             if handler is None:
-                print(f"跳过: 不支持的文件格式 '{fmt}' — {filepath}")
+                print(f"跳过: 不支持的文件格式 '{fmt}' - {filepath}")
                 fail_count += 1
                 continue
 
@@ -216,6 +226,7 @@ def cmd_restore(args) -> int:
 
         except KeyboardInterrupt:
             print("\n用户中断操作。")
+            interrupted = True
             break
         except Exception as e:
             print(f"[FAIL] {filepath}: {e}")
@@ -224,12 +235,19 @@ def cmd_restore(args) -> int:
             failures.append((filepath, str(e)))
 
     print()
-    print(f"恢复完成: 成功 {success_count} 个, 失败 {fail_count} 个, 共替换 {total_replacements} 处")
+    if interrupted:
+        unprocessed = len(files) - success_count - fail_count
+        print(f"恢复已中断: 成功 {success_count} 个, 失败 {fail_count} 个, "
+              f"未处理 {unprocessed} 个, 共替换 {total_replacements} 处")
+    else:
+        print(f"恢复完成: 成功 {success_count} 个, 失败 {fail_count} 个, 共替换 {total_replacements} 处")
     if failures:
         print("失败详情:")
         for fp, err in failures:
             print(f"  {fp}: {err}")
 
+    if interrupted:
+        return 130
     return 1 if fail_count > 0 else 0
 
 

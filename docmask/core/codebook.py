@@ -1,6 +1,19 @@
 """密码本解析与校验模块"""
 import os
 import re
+
+# A-02 ReDoS 防护：优先使用支持 timeout 的 regex 模块，回退到标准 re。
+# 有 regex 模块时，每条正则在编译时绑定超时，finditer/search 自动受限；
+# 无 regex 模块时，仅靠输入长度限制提供部分防护。
+try:
+    import regex as _re_mod
+    _HAS_REGEX_MODULE = True
+    _REGEX_TIMEOUT_SECONDS = 2.0
+except ImportError:
+    import re as _re_mod
+    _HAS_REGEX_MODULE = False
+    _REGEX_TIMEOUT_SECONDS = None
+
 from docmask.config import CODEBOOK_SEPARATOR, REGEX_PREFIX, COMMENT_PREFIX
 
 
@@ -89,8 +102,8 @@ class Codebook:
                         f"{seen_rules[rule_key]} 行：{rule_key}"
                     )
                 try:
-                    compiled = re.compile(pattern_str)
-                except re.error as e:
+                    compiled = _re_mod.compile(pattern_str)
+                except _re_mod.error as e:
                     raise CodebookError(
                         f"密码本第 {line_num} 行正则表达式无效：{pattern_str}，错误：{e}"
                     )
@@ -227,6 +240,10 @@ class Codebook:
     def get_regex_rules(self) -> list[tuple[re.Pattern, str]]:
         """获取正则规则列表"""
         return list(self.regex_rules)
+
+    def get_regex_line_numbers(self) -> list[int]:
+        """获取正则规则对应的密码本行号列表（用于 ReDoS 超时错误报告）。"""
+        return list(self._regex_line_numbers)
 
     @property
     def exact_rule_count(self) -> int:

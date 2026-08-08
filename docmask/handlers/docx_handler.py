@@ -4,6 +4,7 @@
 返回警告，避免用“覆盖全元素”掩盖 OOXML 的能力边界。
 """
 import logging
+import re
 import zipfile
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -38,6 +39,26 @@ NSMAP = {
     "wp": "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
 }
 
+# ===== 扩展隐私表面（统一选择器：采集/脱敏/恢复/校验共用） =====
+# 支持部件内 w:t/w:delText 之外的可安全替换文本节点（element localname 集合）。
+# w:instrText —— 域代码指令文本（如 MERGEFIELD CustomerName）。
+_EXTENDED_TEXT_LOCALNAMES = {"instrText"}
+
+# 支持部件内属性级文本：element localname -> [(attribute localname, namespace)]
+#   namespace 为 "w" 表示属性在 w: 命名空间下；None 表示无命名空间属性。
+#   w:sdtPr/w:tag/@w:val          —— 内容控件标签
+#   w:bookmarkStart/@w:name       —— 书签名称（有 XML Name 命名约束）
+#   wp:docPr/@descr / @title      —— 绘图/图片替代文本
+_EXTENDED_ATTRIBUTE_SURFACE: dict[str, list[tuple[str, Optional[str]]]] = {
+    "tag": [("val", "w")],
+    "bookmarkStart": [("name", "w")],
+    "docPr": [("descr", None), ("title", None)],
+}
+
+# 书签名称必须符合 XML Name 规范：字母/下划线开头，仅含字母数字下划线连字符句点。
+# 脱敏词不符合此规范时 fail closed（阻止输出），避免静默保留敏感内容。
+_BOOKMARK_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.\-]*$")
+
 
 class DocxHandler:
     """DOCX 文件读写与脱敏/恢复，保留格式"""
@@ -55,7 +76,15 @@ class DocxHandler:
         "word/charts/*": "warn-only",
         "word/diagrams/*": "warn-only",
         "word/embeddings/*": "warn-only",
-        "external hyperlink targets": "warn-only",
+        "external hyperlink targets": "blocked-by-default",
+    }
+    # 扩展隐私表面：支持部件内 w:t/w:delText 之外的文本节点与属性
+    EXTENDED_PRIVACY_SURFACE = {
+        "text_nodes": sorted(_EXTENDED_TEXT_LOCALNAMES),
+        "attributes": {
+            local: [(a, ns) for a, ns in attrs]
+            for local, attrs in _EXTENDED_ATTRIBUTE_SURFACE.items()
+        },
     }
     CORE_TEXT_FIELDS = {
         "creator", "lastModifiedBy", "title", "subject", "category",
@@ -66,6 +95,9 @@ class DocxHandler:
     def __init__(self):
         self._total_count = 0
         self.last_warnings: list[str] = []
+        # 外部关系目标安全策略：True（默认，安全模式）含敏感原文时阻止输出；
+        # False（兼容模式）仅告警。
+        self.strict_external_targets = True
 
     # ======================== 安全 XML 文本写回 ========================
 
@@ -282,6 +314,7 @@ class DocxHandler:
         report_progress(progress_callback, 8, TOTAL_STEPS, "元数据脱敏完成")
 
         _accumulate(*self._mask_auxiliary_parts(doc, masker))
+        _accumulate(*self._mask_extended_surface(doc, masker))
         self.last_warnings.extend(
             self._scan_unsupported_parts(doc, masker, original_texts)
         )
@@ -350,6 +383,7 @@ class DocxHandler:
         report_progress(progress_callback, 7, TOTAL_STEPS, "元数据恢复完成")
 
         count += self._restore_auxiliary_parts(doc, restorer)
+        count += self._restore_extended_surface(doc, restorer)
         report_progress(progress_callback, 8, TOTAL_STEPS, "OPC 扩展部件恢复完成")
 
         self._total_count = count
@@ -415,6 +449,30 @@ class DocxHandler:
                     )
                 except (etree.XMLSyntaxError, ValueError):
                     continue
+
+        # 扩展隐私表面（域代码指令、SDT 标签、书签名、图片替代文本）——用于冲突预检
+        parts.extend(self._iter_extended_text_values(doc.element))
+        parts.extend(self._iter_extended_attr_values(doc.element))
+        for root in self._header_footer_roots(doc):
+            parts.extend(self._iter_extended_text_values(root))
+            parts.extend(self._iter_extended_attr_values(root))
+        for _label, note_part in self._note_parts(doc):
+            try:
+                root = etree.fromstring(note_part.blob)
+            except (etree.XMLSyntaxError, ValueError):
+                continue
+            parts.extend(self._iter_extended_text_values(root))
+            parts.extend(self._iter_extended_attr_values(root))
+        for part in doc.part.package.parts:
+            partname = str(part.partname).lstrip("/")
+            if not (partname.startswith("word/comments") and partname.endswith(".xml")):
+                continue
+            try:
+                root = etree.fromstring(part.blob)
+            except (etree.XMLSyntaxError, ValueError):
+                continue
+            parts.extend(self._iter_extended_text_values(root))
+            parts.extend(self._iter_extended_attr_values(root))
 
         # 元数据
         props = doc.core_properties
@@ -756,11 +814,212 @@ class DocxHandler:
             or partname in {"docProps/core.xml", "docProps/app.xml", "docProps/custom.xml"}
         )
 
+    # ===== 扩展隐私表面：统一选择器与辅助方法 =====
+
+    @staticmethod
+    def _get_extended_attr(element, attr_local: str, attr_ns: Optional[str]) -> Optional[str]:
+        """读取扩展隐私表面属性值。attr_ns 为 "w" 时用 w: 命名空间，None 为无命名空间。"""
+        if attr_ns == "w":
+            return element.get(qn(f"w:{attr_local}"))
+        return element.get(attr_local)
+
+    @staticmethod
+    def _set_extended_attr(element, attr_local: str, attr_ns: Optional[str], value: str) -> None:
+        """写入扩展隐私表面属性值。"""
+        if attr_ns == "w":
+            element.set(qn(f"w:{attr_local}"), value)
+        else:
+            element.set(attr_local, value)
+
+    @staticmethod
+    def _iter_extended_text_values(root) -> list[str]:
+        """返回 root 中所有扩展文本节点（w:instrText 等）的非空文本。"""
+        values = []
+        for node in root.iter():
+            if etree.QName(node).localname in _EXTENDED_TEXT_LOCALNAMES and node.text:
+                values.append(node.text)
+        return values
+
+    @classmethod
+    def _iter_extended_attr_values(cls, root) -> list[str]:
+        """返回 root 中所有扩展属性节点（SDT tag/bookmark name/docPr descr/title）的非空值。"""
+        values = []
+        for node in root.iter():
+            local = etree.QName(node).localname
+            if local not in _EXTENDED_ATTRIBUTE_SURFACE:
+                continue
+            for attr_local, attr_ns in _EXTENDED_ATTRIBUTE_SURFACE[local]:
+                value = cls._get_extended_attr(node, attr_local, attr_ns)
+                if value:
+                    values.append(value)
+        return values
+
+    def _mask_extended_surface_root(self, root, masker: Masker) -> tuple[int, dict]:
+        """对单个 XML root 内的扩展隐私表面执行脱敏。
+
+        - w:instrText、SDT tag、docPr descr/title 直接替换；
+        - bookmarkStart/@w:name 替换后校验 XML Name 规范，不符合则 fail closed。
+        """
+        total = 0
+        hits: dict[str, int] = {}
+
+        # 扩展文本节点
+        for node in root.iter():
+            if etree.QName(node).localname not in _EXTENDED_TEXT_LOCALNAMES:
+                continue
+            if not node.text:
+                continue
+            masked, count, chunk_hits = masker.mask_text(node.text)
+            if count:
+                node.text = masked
+                total += count
+                for k, v in chunk_hits.items():
+                    hits[k] = hits.get(k, 0) + v
+
+        # 扩展属性节点
+        for node in root.iter():
+            local = etree.QName(node).localname
+            if local not in _EXTENDED_ATTRIBUTE_SURFACE:
+                continue
+            for attr_local, attr_ns in _EXTENDED_ATTRIBUTE_SURFACE[local]:
+                value = self._get_extended_attr(node, attr_local, attr_ns)
+                if not value:
+                    continue
+                masked, count, chunk_hits = masker.mask_text(value)
+                if not count:
+                    continue
+                # 书签名称有 XML Name 命名约束，脱敏词不符合则 fail closed
+                if local == "bookmarkStart" and not _BOOKMARK_NAME_RE.match(masked):
+                    raise RuntimeError(
+                        "书签名称包含敏感内容，但脱敏词不符合 XML 名称规范"
+                        "（须以字母/下划线开头，仅含字母、数字、下划线、连字符、句点），"
+                        "已阻止输出以避免泄漏。请更换脱敏词或从文档中删除该书签。"
+                    )
+                self._set_extended_attr(node, attr_local, attr_ns, masked)
+                total += count
+                for k, v in chunk_hits.items():
+                    hits[k] = hits.get(k, 0) + v
+
+        return total, hits
+
+    def _restore_extended_surface_root(self, root, restorer: Restorer) -> int:
+        """对单个 XML root 内的扩展隐私表面执行恢复（与 _mask_extended_surface_root 对称）。"""
+        total = 0
+        for node in root.iter():
+            if etree.QName(node).localname in _EXTENDED_TEXT_LOCALNAMES and node.text:
+                restored, count = restorer.restore_text(node.text)
+                if count:
+                    node.text = restored
+                    total += count
+        for node in root.iter():
+            local = etree.QName(node).localname
+            if local not in _EXTENDED_ATTRIBUTE_SURFACE:
+                continue
+            for attr_local, attr_ns in _EXTENDED_ATTRIBUTE_SURFACE[local]:
+                value = self._get_extended_attr(node, attr_local, attr_ns)
+                if not value:
+                    continue
+                restored, count = restorer.restore_text(value)
+                if count:
+                    self._set_extended_attr(node, attr_local, attr_ns, restored)
+                    total += count
+        return total
+
+    def _mask_extended_surface(self, doc: Document, masker: Masker) -> tuple[int, dict]:
+        """脱敏所有支持部件内的扩展隐私表面（域代码/SDT 标签/书签名/图片替代文本）。"""
+        total = 0
+        hits: dict[str, int] = {}
+
+        def _acc(added: int, chunk_hits: dict[str, int]):
+            nonlocal total
+            total += added
+            for k, v in chunk_hits.items():
+                hits[k] = hits.get(k, 0) + v
+
+        # document.xml（element 形式，save 时自动序列化）
+        _acc(*self._mask_extended_surface_root(doc.element, masker))
+
+        # header/footer（element 形式）
+        for root in self._header_footer_roots(doc):
+            _acc(*self._mask_extended_surface_root(root, masker))
+
+        # footnotes/endnotes（blob 形式，需写回）
+        for _label, note_part in self._note_parts(doc):
+            try:
+                root = etree.fromstring(note_part.blob)
+            except (etree.XMLSyntaxError, ValueError):
+                continue
+            added, chunk_hits = self._mask_extended_surface_root(root, masker)
+            if added:
+                note_part._blob = etree.tostring(
+                    root, xml_declaration=True, encoding="UTF-8", standalone=True
+                )
+                _acc(added, chunk_hits)
+
+        # comments（blob 形式，需写回）
+        for part in doc.part.package.parts:
+            partname = str(part.partname).lstrip("/")
+            if not (partname.startswith("word/comments") and partname.endswith(".xml")):
+                continue
+            try:
+                root = etree.fromstring(part.blob)
+            except (etree.XMLSyntaxError, ValueError):
+                continue
+            added, chunk_hits = self._mask_extended_surface_root(root, masker)
+            if added:
+                self._replace_part_xml(part, root)
+                _acc(added, chunk_hits)
+
+        return total, hits
+
+    def _restore_extended_surface(self, doc: Document, restorer: Restorer) -> int:
+        """恢复所有支持部件内的扩展隐私表面（与 _mask_extended_surface 对称）。"""
+        total = 0
+
+        total += self._restore_extended_surface_root(doc.element, restorer)
+
+        for root in self._header_footer_roots(doc):
+            total += self._restore_extended_surface_root(root, restorer)
+
+        for _label, note_part in self._note_parts(doc):
+            try:
+                root = etree.fromstring(note_part.blob)
+            except (etree.XMLSyntaxError, ValueError):
+                continue
+            added = self._restore_extended_surface_root(root, restorer)
+            if added:
+                note_part._blob = etree.tostring(
+                    root, xml_declaration=True, encoding="UTF-8", standalone=True
+                )
+                total += added
+
+        for part in doc.part.package.parts:
+            partname = str(part.partname).lstrip("/")
+            if not (partname.startswith("word/comments") and partname.endswith(".xml")):
+                continue
+            try:
+                root = etree.fromstring(part.blob)
+            except (etree.XMLSyntaxError, ValueError):
+                continue
+            added = self._restore_extended_surface_root(root, restorer)
+            if added:
+                self._replace_part_xml(part, root)
+                total += added
+
+        return total
+
     @staticmethod
     def _contains_rule_source(text: str, masker: Masker) -> bool:
-        return any(key in text for key in masker.codebook.get_sorted_keys()) or any(
-            pattern.search(text) is not None for pattern, _ in masker.regex_rules
-        )
+        if any(key in text for key in masker.codebook.get_sorted_keys()):
+            return True
+        for pattern, _ in masker.regex_rules:
+            try:
+                if pattern.search(text) is not None:
+                    return True
+            except Exception:
+                # A-02: 正则超时等异常按"可能含敏感内容"处理（fail safe）
+                return True
+        return False
 
     @staticmethod
     def _snapshot_all_texts(doc: Document) -> set[str]:
@@ -787,6 +1046,9 @@ class DocxHandler:
                             value = comment.get(attribute)
                             if value:
                                 texts.add(value)
+                # 扩展隐私表面的属性值（SDT tag/bookmark name/docPr descr/title）
+                # itertext 不覆盖属性，需单独采集
+                texts.update(DocxHandler._iter_extended_attr_values(root))
             except (etree.XMLSyntaxError, ValueError):
                 continue
         return texts
@@ -798,6 +1060,9 @@ class DocxHandler:
 
         与 _assert_no_supported_residuals 同理，只对"在脱敏前快照中存在的文本"
         检查规则原文，避免脱敏词自污染导致的误告警。
+
+        A-03: 除逐节点检查外，增加有界滑动窗口聚合扫描，检测被拆分到相邻
+        XML 文本节点中的敏感原文（如 <a:t>SEC</a:t><a:t>RET</a:t>）。
         """
         warnings: list[str] = []
         for part in doc.part.package.parts:
@@ -805,17 +1070,25 @@ class DocxHandler:
             if not self._is_supported_part(partname) and partname.endswith(".xml"):
                 try:
                     root = etree.fromstring(part.blob)
-                    # 逐个文本节点检查，只告警"未被替换的原文"
-                    for value in root.itertext():
+                    # 按文档顺序收集非空文本值
+                    text_values = [v for v in root.itertext() if v]
+                    found = False
+                    # 1. 逐个文本节点检查（原有逻辑）
+                    for value in text_values:
                         if (
-                            value
-                            and value in original_texts
+                            value in original_texts
                             and self._contains_rule_source(value, masker)
                         ):
                             warnings.append(
                                 f"不支持的 OPC 文本部件可能含敏感内容：{partname}"
                             )
+                            found = True
                             break
+                    # 2. A-03: 有界滑动窗口聚合扫描（检测跨节点拆分）
+                    if not found:
+                        found = self._scan_cross_node_secrets(
+                            text_values, original_texts, masker, partname, warnings
+                        )
                 except (etree.XMLSyntaxError, ValueError):
                     continue
 
@@ -824,8 +1097,43 @@ class DocxHandler:
                     continue
                 target = relationship.target_ref
                 if self._contains_rule_source(target, masker):
+                    # 安全模式：阻止输出以避免泄漏；兼容模式：仅告警
+                    if self.strict_external_targets:
+                        raise RuntimeError(
+                            f"外部关系目标含敏感内容，已阻止输出以避免泄漏：{partname}"
+                        )
                     warnings.append(f"外部关系目标可能含敏感内容：{partname}")
         return list(dict.fromkeys(warnings))
+
+    # A-03: 跨节点拆分敏感原文的滑动窗口扫描上限。
+    # 窗口过大会跨不相关结构产生误报；2-4 足以覆盖 OOXML 中常见的 run 拆分。
+    _CROSS_NODE_WINDOW_MAX = 4
+
+    def _scan_cross_node_secrets(
+        self,
+        text_values: list[str],
+        original_texts: set[str],
+        masker: Masker,
+        partname: str,
+        warnings: list[str],
+    ) -> bool:
+        """有界滑动窗口聚合扫描：检测被拆分到相邻文本节点的敏感原文。
+
+        只做告警（warn-only），窗口有界以避免跨不相关结构产生大量误报。
+        返回 True 表示已追加告警。
+        """
+        n = len(text_values)
+        for i in range(n):
+            for w in range(2, min(self._CROSS_NODE_WINDOW_MAX + 1, n - i + 1)):
+                combined = "".join(text_values[i:i + w])
+                # 优先匹配快照中的完整原文（低误报）；其次直接检查规则原文
+                if (combined in original_texts or w == 2) and \
+                        self._contains_rule_source(combined, masker):
+                    warnings.append(
+                        f"不支持的 OPC 文本部件可能含跨节点敏感内容：{partname}"
+                    )
+                    return True
+        return False
 
     def _assert_no_supported_residuals(
         self, filepath: str, masker: Masker, original_texts: set[str]
@@ -855,9 +1163,11 @@ class DocxHandler:
                         if etree.QName(node).localname in self.CORE_TEXT_FIELDS
                     ]
                 else:
+                    # 支持 body 部件：w:t/w:delText + 扩展文本节点（w:instrText）
+                    text_localnames = {"t", "delText"} | _EXTENDED_TEXT_LOCALNAMES
                     nodes = [
                         node for node in root.iter()
-                        if etree.QName(node).localname in {"t", "delText"}
+                        if etree.QName(node).localname in text_localnames
                     ]
                 values = [node.text for node in nodes if node.text]
                 if partname.startswith("word/comments"):
@@ -868,6 +1178,10 @@ class DocxHandler:
                                 comment.get(qn("w:initials")),
                             ) if value
                         )
+                # 扩展隐私表面属性值（SDT tag/bookmark name/docPr descr/title）
+                # 必须与写入阶段覆盖完全一致
+                if partname not in {"docProps/app.xml", "docProps/custom.xml", "docProps/core.xml"}:
+                    values.extend(self._iter_extended_attr_values(root))
                 # 只检查"未被替换的原文"：文本值在脱敏前快照中存在，
                 # 说明该节点没被脱敏处理（或处理失败），且包含规则原文 → 残留。
                 for value in values:

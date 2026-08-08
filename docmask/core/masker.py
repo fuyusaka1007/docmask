@@ -3,9 +3,32 @@ import re
 import logging
 from typing import Optional
 
-from docmask.core.codebook import Codebook
+from docmask.core.codebook import Codebook, _HAS_REGEX_MODULE, _REGEX_TIMEOUT_SECONDS
 
 logger = logging.getLogger(__name__)
+
+# A-02: 正则规则输入长度硬限制（字节）。超过此长度的文本块只对精确规则全文匹配，
+# 正则规则仅匹配前 _MAX_REGEX_INPUT_LENGTH 字符。无 regex 模块时这是主要 ReDoS 防线。
+_MAX_REGEX_INPUT_LENGTH = 256 * 1024  # 256 KB
+
+# regex 模块的 finditer 在超时时抛出内置 TimeoutError；无 regex 模块时占位异常永远不会触发。
+if _HAS_REGEX_MODULE:
+    _REGEX_TIMEOUT_ERROR = TimeoutError
+else:
+    _REGEX_TIMEOUT_ERROR = type("_NeverRaised", (BaseException,), {})
+
+
+class RegexBudgetExceededError(Exception):
+    """正则规则执行超预算（ReDoS 防护触发）。"""
+
+    def __init__(self, rule_index: int, line_number: Optional[int] = None):
+        self.rule_index = rule_index
+        self.line_number = line_number
+        msg = f"正则规则执行超时（规则索引 {rule_index}"
+        if line_number is not None:
+            msg += f"，密码本第 {line_number} 行"
+        msg += "），已中止该文件处理"
+        super().__init__(msg)
 
 
 class MaskConflictError(Exception):
@@ -89,14 +112,27 @@ class Masker:
                     )
 
         for rule_index, (pattern, replacement) in enumerate(self.regex_rules):
-            for match in pattern.finditer(text):
-                # Codebook 已拒绝空匹配；这里保留防御性检查。
-                if match.end() == match.start():
-                    continue
-                key = f"regex:{pattern.pattern}"
-                candidates.append(
-                    (match.start(), match.end(), 1, rule_index, key, replacement)
-                )
+            # A-02: 限制正则输入长度，防止超长文本加剧回溯
+            regex_text = text if len(text) <= _MAX_REGEX_INPUT_LENGTH else text[:_MAX_REGEX_INPUT_LENGTH]
+            try:
+                # regex 模块支持 per-call timeout；re 模块不支持
+                if _HAS_REGEX_MODULE:
+                    match_iter = pattern.finditer(regex_text, timeout=_REGEX_TIMEOUT_SECONDS)
+                else:
+                    match_iter = pattern.finditer(regex_text)
+                # finditer 返回惰性迭代器，超时在迭代期间抛出，需包裹整个循环
+                for match in match_iter:
+                    # Codebook 已拒绝空匹配；这里保留防御性检查。
+                    if match.end() == match.start():
+                        continue
+                    key = f"regex:{pattern.pattern}"
+                    candidates.append(
+                        (match.start(), match.end(), 1, rule_index, key, replacement)
+                    )
+            except _REGEX_TIMEOUT_ERROR:
+                line_numbers = self.codebook.get_regex_line_numbers()
+                line_num = line_numbers[rule_index] if rule_index < len(line_numbers) else None
+                raise RegexBudgetExceededError(rule_index, line_num) from None
 
         candidates.sort(
             key=lambda item: (item[0], -(item[1] - item[0]), item[2], item[3])

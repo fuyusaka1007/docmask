@@ -2,14 +2,19 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import tempfile
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Callable, Optional
 
 from docmask.core.codebook import Codebook
+from docmask.config import DEFAULT_FORMATS
 from docmask.utils.file_utils import user_data_dir
+
+logger = logging.getLogger(__name__)
 
 
 class Mode(str, Enum):
@@ -95,30 +100,101 @@ class SettingsModel:
     output_same_dir: bool = True
     generate_report: bool = True
 
+    # A-05: 值类型校验白名单
+    _VALID_THEMES = {"深色", "浅色", "跟随系统"}
+    _VALID_SCALES = {"80%", "90%", "100%", "110%", "120%"}
+    _VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+    _VALID_FORMATS = set(DEFAULT_FORMATS)
+
     @classmethod
     def load(cls) -> "SettingsModel":
-        """从用户数据目录加载设置；文件不存在或损坏时返回默认值。"""
+        """从用户数据目录加载设置；文件不存在或损坏时返回默认值。
+
+        A-05: 按字段校验值类型，坏字段回退默认值并记录 warning，
+        不因单个坏字段丢弃全部有效设置。
+        """
         path = cls._settings_path()
-        if path.exists():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                valid_keys = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
-                return cls(**valid_keys)
-            except Exception:
-                pass
-        return cls()
+        if not path.exists():
+            return cls()
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            logger.warning("settings.json 解析失败，使用默认设置")
+            return cls()
+        if not isinstance(data, dict):
+            logger.warning("settings.json 顶层不是对象，使用默认设置")
+            return cls()
+
+        # 按字段校验，坏字段回退默认值
+        defaults = cls()
+        theme = cls._validate_str(data, "theme", cls._VALID_THEMES, defaults.theme)
+        scale = cls._validate_str(data, "scale", cls._VALID_SCALES, defaults.scale)
+        log_level = cls._validate_str(data, "log_level", cls._VALID_LOG_LEVELS, defaults.log_level)
+        format_filters = cls._validate_format_filters(data, defaults.format_filters)
+        output_same_dir = cls._validate_bool(data, "output_same_dir", defaults.output_same_dir)
+        generate_report = cls._validate_bool(data, "generate_report", defaults.generate_report)
+        return cls(
+            theme=theme,
+            scale=scale,
+            log_level=log_level,
+            format_filters=format_filters,
+            output_same_dir=output_same_dir,
+            generate_report=generate_report,
+        )
+
+    @staticmethod
+    def _validate_str(data: dict, key: str, allowed: set[str], default: str) -> str:
+        value = data.get(key, default)
+        if isinstance(value, str) and value in allowed:
+            return value
+        logger.warning("settings.json 字段 %s 值无效，回退默认值", key)
+        return default
+
+    @staticmethod
+    def _validate_bool(data: dict, key: str, default: bool) -> bool:
+        value = data.get(key, default)
+        if isinstance(value, bool):
+            return value
+        logger.warning("settings.json 字段 %s 值无效，回退默认值", key)
+        return default
+
+    @classmethod
+    def _validate_format_filters(cls, data: dict, default: list[str]) -> list[str]:
+        value = data.get("format_filters", default)
+        if not isinstance(value, list):
+            logger.warning("settings.json 字段 format_filters 值无效，回退默认值")
+            return default
+        valid = [f for f in value if isinstance(f, str) and f in cls._VALID_FORMATS]
+        if not valid:
+            logger.warning("settings.json 字段 format_filters 无有效项，回退默认值")
+            return default
+        return valid
 
     def save(self) -> None:
-        """保存设置到用户数据目录。"""
+        """保存设置到用户数据目录。
+
+        A-05: 使用同目录临时文件 + 原子提交，不完全吞掉异常。
+        """
         path = self._settings_path()
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(
-                json.dumps(asdict(self), ensure_ascii=False, indent=2),
-                encoding="utf-8",
+            content = json.dumps(asdict(self), ensure_ascii=False, indent=2)
+            # 同目录临时文件 + 原子重命名
+            fd, temp_name = tempfile.mkstemp(
+                prefix=".settings.", suffix=".tmp", dir=str(path.parent)
             )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    f.write(content)
+                os.replace(temp_name, path)
+            except Exception:
+                try:
+                    os.unlink(temp_name)
+                except OSError:
+                    pass
+                raise
         except Exception:
-            pass
+            logger.warning("保存 settings.json 失败", exc_info=True)
 
     @staticmethod
     def _settings_path() -> Path:

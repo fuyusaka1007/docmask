@@ -2,6 +2,8 @@
 python-docx>=1.0
 chardet>=5.0
 lxml>=4.9
+# ReDoS 防护：为正则规则提供运行时超时（未安装时自动降级为输入长度限制）
+regex>=2024.0
 
 # Windows Microsoft Word .doc 转换（非 Windows 平台自动跳过）
 pywin32>=306; sys_platform == "win32"
