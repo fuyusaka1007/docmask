@@ -331,6 +331,43 @@ class SettingsPage(ctk.CTkFrame):
             command=self._on_clear_log,
         ).pack(side="left")
 
+        # 分隔线
+        self._separator(inner)
+
+        # 记录工作历史开关
+        history_row = ctk.CTkFrame(inner, fg_color="transparent")
+        history_row.pack(fill="x", pady=(0, 0))
+
+        self._history_var = ctk.StringVar(
+            value="1" if self.state.history_enabled else "0"
+        )
+        ctk.CTkCheckBox(
+            history_row, text="记录工作历史",
+            font=font(FS_BODY),
+            variable=self._history_var, onvalue="1", offvalue="0",
+            height=BTN_HEIGHT_SM,
+            checkbox_width=20, checkbox_height=20,
+            corner_radius=4,
+            fg_color=PRIMARY, hover_color=PRIMARY_HOVER,
+            text_color=FG_MAIN,
+            command=self._on_history_change,
+        ).pack(side="left")
+
+        # info 说明
+        history_info = ctk.CTkFrame(history_row, fg_color="transparent")
+        history_info.pack(side="left", padx=(S_3, 0))
+        ctk.CTkLabel(
+            history_info,
+            image=get_ctk_image("info", 14, FG_MUTED),
+            text="",
+        ).pack(side="left", padx=(0, S_2), anchor="center")
+        ctk.CTkLabel(
+            history_info,
+            text="记录脱敏/恢复操作的文件和密码本信息，仅保存在本地",
+            font=font(FS_SMALL),
+            text_color=FG_MUTED, anchor="w", justify="left",
+        ).pack(side="left", fill="x", expand=True)
+
     # ======================== 帮助卡片 ========================
 
     def _build_help_card(self):
@@ -464,6 +501,10 @@ class SettingsPage(ctk.CTkFrame):
         self.state.generate_report = self._report_var.get() == "1"
         self._save_and_notify()
 
+    def _on_history_change(self):
+        self.state.history_enabled = self._history_var.get() == "1"
+        self._save_and_notify()
+
     def _on_log_level_change(self, value: str):
         self.state.settings.log_level = value
         level = getattr(logging, value, logging.INFO)
@@ -579,3 +620,6 @@ class SettingsPage(ctk.CTkFrame):
 
         # 同步覆盖率报告
         self._report_var.set("1" if self.state.generate_report else "0")
+
+        # 同步历史记录开关
+        self._history_var.set("1" if self.state.history_enabled else "0")

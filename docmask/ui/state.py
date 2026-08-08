@@ -68,6 +68,13 @@ class CodebookState:
     messages: list[str] = field(default_factory=list)
     error: Optional[str] = None  # 加载异常
 
+    # beta3: 密码本库相关
+    library_id: Optional[str] = None
+    library_name: Optional[str] = None
+    version: Optional[str] = None
+    from_library: bool = False
+    edit_rules: list = field(default_factory=list)
+
     @property
     def is_loaded(self) -> bool:
         return self.codebook is not None
@@ -99,6 +106,7 @@ class SettingsModel:
     format_filters: list[str] = field(default_factory=lambda: ["docx", "doc", "txt"])
     output_same_dir: bool = True
     generate_report: bool = True
+    record_history: bool = True  # beta3: 工作历史记录开关
 
     # A-05: 值类型校验白名单
     _VALID_THEMES = {"深色", "浅色", "跟随系统"}
@@ -133,6 +141,7 @@ class SettingsModel:
         format_filters = cls._validate_format_filters(data, defaults.format_filters)
         output_same_dir = cls._validate_bool(data, "output_same_dir", defaults.output_same_dir)
         generate_report = cls._validate_bool(data, "generate_report", defaults.generate_report)
+        record_history = cls._validate_bool(data, "record_history", defaults.record_history)
         return cls(
             theme=theme,
             scale=scale,
@@ -140,6 +149,7 @@ class SettingsModel:
             format_filters=format_filters,
             output_same_dir=output_same_dir,
             generate_report=generate_report,
+            record_history=record_history,
         )
 
     @staticmethod
@@ -205,12 +215,14 @@ class SettingsModel:
         state.format_filters = set(self.format_filters)
         state.output_same_dir = self.output_same_dir
         state.generate_report = self.generate_report
+        state.history_enabled = self.record_history
 
     def sync_from_state(self, state: "AppState") -> None:
         """从运行时 AppState 同步设置。"""
         self.format_filters = sorted(state.format_filters)
         self.output_same_dir = state.output_same_dir
         self.generate_report = state.generate_report
+        self.record_history = state.history_enabled
 
 
 @dataclass
@@ -225,6 +237,7 @@ class AppState:
     output_same_dir: bool = True
     output_dir: Optional[str] = None
     generate_report: bool = True
+    history_enabled: bool = True  # beta3: 工作历史记录开关
 
     # 持久化设置
     settings: SettingsModel = field(default_factory=SettingsModel)

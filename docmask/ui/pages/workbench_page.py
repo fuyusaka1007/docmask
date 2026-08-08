@@ -402,6 +402,18 @@ class WorkbenchPage(ctk.CTkFrame):
         cb = self.state.codebook
         self._cb_warning.pack_forget()
 
+        # 库密码本联动：在 PathPicker 中显示密码本名称
+        if cb.is_loaded and cb.from_library and cb.library_name:
+            current = self._codebook_picker.get_path()
+            display = f"[库] {cb.library_name}"
+            if current != display:
+                self._codebook_picker.set_path(display)
+        elif cb.is_loaded and not cb.from_library and cb.path:
+            # 外部文件：确保 PathPicker 显示文件路径
+            current = self._codebook_picker.get_path()
+            if current != cb.path:
+                self._codebook_picker.set_path(cb.path)
+
         if cb.error:
             self._cb_dot.configure(image=get_ctk_image("alert-triangle", 14, ERROR), text="")
             self._cb_status_text.configure(

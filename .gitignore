@@ -5,6 +5,7 @@
 /测试文档3长篇幅.docx
 /东莞宝康_v2草稿.docx
 /东莞宝康_v2草稿_desensitized.docx
+*.docx
 # 根目录的密码本（含真实脱敏映射）
 /codebook.txt
 # 测试反馈输出
@@ -12,7 +13,9 @@
 # 运行日志
 /docmask.log
 /HANDOFF.md
+/beta3_codebook优化功能开发方案.md
 *.log
+/代码二次审计-20260805.md
 
 # ===== 测试产物（含真实数据 / 体积大）=====
 test-artifacts/

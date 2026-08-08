@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>历史记录（beta3 设计预览）</title>
+
+  <!--
+    ============================================================
+    DocMask beta3 历史记录页面设计预览
+    ============================================================
+    本文件展示历史记录页面的完整布局，供无上下文的大模型参考实现 UI。
+
+    页面结构：
+      侧边栏（220px 固定宽度，深色背景） + 内容区（可滚动）
+
+    内容区结构（自上而下）：
+      1. 页头：标题"历史记录" + 副标题 + 清空历史按钮
+      2. 筛选栏：全部 / 脱敏 /恢复 筛选按钮
+      3. 历史记录表格（时间 | 文件名 | 操作 | 密码本 | 替换数 | 状态 | 操作）
+      4. 空状态变体（无记录 / 历史已关闭）
+
+    设计规范（与现有页面完全一致）：
+      - 字体：PingFang SC（macOS）/ Microsoft YaHei UI（Windows）/ Noto Sans CJK SC（Linux）
+      - 字号：标题 20px bold / 正文 14px / 标签 13px / 辅助 12px
+      - 间距：S1=4px S2=8px S3=12px S4=16px S5=24px S6=32px
+      - 卡片：白底 #FFFFFF / 圆角 12px / 边框 1px #DCE3EA
+      - 按钮-主：背景 #168AAD / 文字 #FFFFFF / 高 42px / 圆角 8px
+      - 按钮-次：背景 #FFFFFF / 文字 #172033 / 边框 1px #DCE3EA / 高 36px / 圆角 8px
+      - 表格行高 48px / 表头字号 12px / 正文字号 13px
+      - 徽章：圆角 999px / 字号 12px
+      - 图标：Lucide 图标库
+    ============================================================
+  -->
+
+  <style id="theme-vars">
+:root {
+  --brand-primary: #168AAD;
+  --brand-primary-hover: #11728F;
+  --brand-primary-foreground: #FFFFFF;
+  --brand-background: #F4F7FA;
+  --brand-foreground: #172033;
+  --brand-muted: #667085;
+  --brand-muted-foreground: #9CA3AF;
+  --brand-card: #FFFFFF;
+  --brand-border: #DCE3EA;
+  --brand-sidebar-bg: #0F1B2D;
+  --brand-sidebar-fg: #DCE3EA;
+  --brand-state-success: #168A5B;
+  --brand-state-warning: #D68B16;
+  --brand-state-error: #D94A4A;
+  --brand-state-info: #3B82C4;
+  --brand-radius-sm: 4px;
+  --brand-radius-md: 8px;
+  --brand-radius-lg: 12px;
+  --brand-radius-pill: 999px;
+  --brand-shadow-1: 0 1px 2px rgba(15,23,42,0.05), 0 1px 1px rgba(15,23,42,0.03);
+  --brand-font-family: "PingFang SC", "Microsoft YaHei UI", "Noto Sans CJK SC", system-ui, sans-serif;
+  --brand-font-mono: "Cascadia Code", "Fira Code", "Consolas", monospace;
+}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+  <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+  <style>
+    body { margin: 0; font-family: var(--brand-font-family); background: var(--brand-background); color: var(--brand-foreground); }
+
+    .app-shell { display: flex; height: 100vh; overflow: hidden; }
+    .content-area { flex: 1; overflow-y: auto; }
+
+    .card { background: var(--brand-card); border-radius: var(--brand-radius-lg); box-shadow: var(--brand-shadow-1); border: 1px solid var(--brand-border); }
+
+    .btn-primary { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 20px; background: var(--brand-primary); color: var(--brand-primary-foreground); border: none; border-radius: var(--brand-radius-md); font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .btn-primary:hover { background: var(--brand-primary-hover); }
+    .btn-secondary { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; background: var(--brand-card); color: var(--brand-foreground); border: 1px solid var(--brand-border); border-radius: var(--brand-radius-md); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .btn-secondary:hover { background: var(--brand-background); }
+    .btn-danger { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; background: var(--brand-card); color: var(--brand-state-error); border: 1px solid var(--brand-border); border-radius: var(--brand-radius-md); font-size: 13px; font-weight: 500; cursor: pointer; }
+    .btn-danger:hover { border-color: var(--brand-state-error); }
+
+    /* 徽章 */
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--brand-radius-pill); font-size: 12px; font-weight: 500; }
+    .badge-success { background: rgba(22,138,91,0.10); color: var(--brand-state-success); }
+    .badge-warning { background: rgba(214,139,22,0.10); color: var(--brand-state-warning); }
+    .badge-error   { background: rgba(217,74,74,0.10); color: var(--brand-state-error); }
+    .badge-muted   { background: rgba(102,112,133,0.10); color: var(--brand-muted); }
+    .badge__dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    .badge__dot--success { background: var(--brand-state-success); }
+    .badge__dot--warning { background: var(--brand-state-warning); }
+    .badge__dot--error   { background: var(--brand-state-error); }
+    .badge__dot--muted   { background: var(--brand-muted); }
+
+    /* 筛选按钮 */
+    .filter-pill { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: var(--brand-radius-pill); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .filter-pill--active { background: var(--brand-primary); color: var(--brand-primary-foreground); }
+    .filter-pill--inactive { background: var(--brand-card); color: var(--brand-muted); border: 1px solid var(--brand-border); }
+    .filter-pill--inactive:hover { color: var(--brand-foreground); border-color: var(--brand-muted); }
+
+    /* 表格 */
+    .history-table { width: 100%; border-collapse: collapse; }
+    .history-table th { text-align: left; padding: 10px 16px; font-size: 12px; font-weight: 600; color: var(--brand-muted); border-bottom: 1px solid var(--brand-border); }
+    .history-table td { padding: 0 16px; height: 48px; font-size: 13px; color: var(--brand-foreground); border-bottom: 1px solid var(--brand-border); }
+    .history-table tbody tr:hover td { background: rgba(22,138,173,0.04); }
+
+    /* 操作链接 */
+    .action-link { font-size: 13px; color: var(--brand-primary); cursor: pointer; }
+    .action-link:hover { text-decoration: underline; }
+    .action-link--muted { color: var(--brand-muted); }
+    .action-link--muted:hover { color: var(--brand-foreground); }
+
+    /* 空状态 */
+    .empty-state { text-align: center; padding: 48px 0; }
+    .empty-state-icon { color: var(--brand-muted-foreground); margin-bottom: 12px; }
+    .empty-state-title { font-size: 14px; font-weight: 500; color: var(--brand-muted); margin-bottom: 4px; }
+    .empty-state-desc { font-size: 12px; color: var(--brand-muted-foreground); }
+
+    /* 操作类型标签 */
+    .mode-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--brand-radius-sm); font-size: 11px; font-weight: 600; }
+    .mode-mask    { background: rgba(22,138,173,0.1); color: var(--brand-primary); }
+    .mode-restore { background: rgba(22,138,91,0.1); color: var(--brand-state-success); }
+
+    /* 视图分隔（仅预览用） */
+    .view-separator { border-top: 2px dashed var(--brand-border); margin: 48px 0; padding-top: 24px; }
+    .view-label { font-size: 12px; font-weight: 600; color: var(--brand-muted-foreground); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <!-- ======================== 侧边栏 ======================== -->
+    <aside style="width: 220px; flex-shrink: 0; display: flex; flex-direction: column; height: 100%; background: var(--brand-sidebar-bg);">
+      <div style="padding: 24px 20px 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="shield-check" style="width: 24px; height: 24px; color: #168AAD;"></i>
+          <span style="font-size: 16px; font-weight: 600; color: #FFFFFF;">DocMask</span>
+        </div>
+        <p style="font-size: 12px; color: #667085; margin: 4px 0 0 0;">本地文档保护</p>
+      </div>
+      <nav style="flex: 1; padding: 0 12px; display: flex; flex-direction: column; gap: 4px;">
+        <a style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; font-size: 14px; color: #DCE3EA; text-decoration: none;">
+          <i data-lucide="workflow" style="width: 20px; height: 20px;"></i> 工作台
+        </a>
+        <a style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; font-size: 14px; color: #DCE3EA; text-decoration: none;">
+          <i data-lucide="book-open" style="width: 20px; height: 20px;"></i> 密码本
+        </a>
+        <!-- 当前激活项 -->
+        <a style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #168AAD; background: rgba(22,138,173,0.15); border-left: 3px solid #168AAD; text-decoration: none;">
+          <i data-lucide="history" style="width: 20px; height: 20px;"></i> 历史记录
+        </a>
+        <a style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; font-size: 14px; color: #DCE3EA; text-decoration: none;">
+          <i data-lucide="clipboard-list" style="width: 20px; height: 20px;"></i> 任务结果
+        </a>
+        <a style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; font-size: 14px; color: #DCE3EA; text-decoration: none;">
+          <i data-lucide="settings" style="width: 20px; height: 20px;"></i> 设置与帮助
+        </a>
+      </nav>
+      <div style="padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #667085;">
+          <i data-lucide="shield" style="width: 14px; height: 14px;"></i> 纯本地运行
+        </div>
+        <p style="font-size: 12px; color: #4B5563; margin: 2px 0 0 0;">文件不会上传</p>
+        <p style="font-size: 12px; color: #4B5563; margin: 4px 0 0 0;">v0.1.0-beta.3</p>
+      </div>
+    </aside>
+
+    <!-- ======================== 内容区 ======================== -->
+    <div class="content-area">
+      <div style="max-width: 960px; margin: 0 auto; padding: 32px;">
+
+        <!-- 页头 -->
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px;">
+          <div>
+            <h1 style="font-size: 20px; font-weight: 700; color: var(--brand-foreground); margin: 0;">历史记录</h1>
+            <p style="font-size: 12px; color: var(--brand-muted); margin: 4px 0 0 0;">查看脱敏/恢复操作记录、使用的密码本与处理结果</p>
+          </div>
+          <button class="btn-danger">
+            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> 清空历史
+          </button>
+        </div>
+
+        <!-- 筛选栏 -->
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+          <span class="filter-pill filter-pill--active">全部</span>
+          <span class="filter-pill filter-pill--inactive">脱敏</span>
+          <span class="filter-pill filter-pill--inactive">恢复</span>
+        </div>
+
+        <!-- 历史记录表格 -->
+        <div class="card" style="overflow: hidden;">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">时间</th>
+                <th>文件名</th>
+                <th style="width: 64px;">操作</th>
+                <th style="width: 160px;">密码本</th>
+                <th style="width: 70px;">替换数</th>
+                <th style="width: 80px;">状态</th>
+                <th style="width: 80px;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 行 1：脱敏-成功 -->
+              <tr>
+                <td style="color: var(--brand-muted); font-size: 12px;">08-08 15:30</td>
+                <td style="font-weight: 500;">季度报告.docx</td>
+                <td><span class="mode-tag mode-mask">脱敏</span></td>
+                <td style="color: var(--brand-muted);">
+                  <div style="font-size: 13px;">默认密码本</div>
+                  <div style="font-size: 11px; color: var(--brand-muted-foreground);">v-20260808_150100</div>
+                </td>
+                <td>42</td>
+                <td><span class="badge badge-success"><span class="badge__dot badge__dot--success"></span> 完成</span></td>
+                <td><span class="action-link">打开目录</span></td>
+              </tr>
+              <!-- 行 2：脱敏-冲突 -->
+              <tr>
+                <td style="color: var(--brand-muted); font-size: 12px;">08-08 15:28</td>
+                <td style="font-weight: 500;">客户名单.txt</td>
+                <td><span class="mode-tag mode-mask">脱敏</span></td>
+                <td style="color: var(--brand-muted);">
+                  <div style="font-size: 13px;">默认密码本</div>
+                  <div style="font-size: 11px; color: var(--brand-muted-foreground);">v-20260808_150100</div>
+                </td>
+                <td style="color: var(--brand-muted-foreground);">--</td>
+                <td><span class="badge badge-warning"><span class="badge__dot badge__dot--warning"></span> 冲突</span></td>
+                <td><span class="action-link action-link--muted">详情</span></td>
+              </tr>
+              <!-- 行 3：恢复-成功 -->
+              <tr>
+                <td style="color: var(--brand-muted); font-size: 12px;">08-08 14:15</td>
+                <td style="font-weight: 500;">合同_desensitized.docx</td>
+                <td><span class="mode-tag mode-restore">恢复</span></td>
+                <td style="color: var(--brand-muted);">
+                  <div style="font-size: 13px;">项目A脱敏规则</div>
+                  <div style="font-size: 11px; color: var(--brand-muted-foreground);">v-20260807_103000</div>
+                </td>
+                <td>128</td>
+                <td><span class="badge badge-success"><span class="badge__dot badge__dot--success"></span> 完成</span></td>
+                <td><span class="action-link">打开目录</span></td>
+              </tr>
+              <!-- 行 4：脱敏-失败 -->
+              <tr>
+                <td style="color: var(--brand-muted); font-size: 12px;">08-08 13:42</td>
+                <td style="font-weight: 500;">归档.doc</td>
+                <td><span class="mode-tag mode-mask">脱敏</span></td>
+                <td style="color: var(--brand-muted);">
+                  <div style="font-size: 13px;">默认密码本</div>
+                  <div style="font-size: 11px; color: var(--brand-muted-foreground);">v-20260808_140000</div>
+                </td>
+                <td>0</td>
+                <td><span class="badge badge-error"><span class="badge__dot badge__dot--error"></span> 失败</span></td>
+                <td><span class="action-link action-link--muted">详情</span></td>
+              </tr>
+              <!-- 行 5：脱敏-成功 -->
+              <tr>
+                <td style="color: var(--brand-muted); font-size: 12px;">08-07 16:20</td>
+                <td style="font-weight: 500;">协议.txt</td>
+                <td><span class="mode-tag mode-mask">脱敏</span></td>
+                <td style="color: var(--brand-muted);">
+                  <div style="font-size: 13px;">测试用密码本</div>
+                  <div style="font-size: 11px; color: var(--brand-muted-foreground);">v-20260806_142200</div>
+                </td>
+                <td>15</td>
+                <td><span class="badge badge-success"><span class="badge__dot badge__dot--success"></span> 完成</span></td>
+                <td><span class="action-link">打开目录</span></td>
+              </tr>
+              <!-- 行 6：恢复-已停止 -->
+              <tr>
+                <td style="color: var(--brand-muted); font-size: 12px;">08-07 10:05</td>
+                <td style="font-weight: 500;">简历.docx</td>
+                <td><span class="mode-tag mode-restore">恢复</span></td>
+                <td style="color: var(--brand-muted);">
+                  <div style="font-size: 13px;">默认密码本</div>
+                  <div style="font-size: 11px; color: var(--brand-muted-foreground);">v-20260807_093000</div>
+                </td>
+                <td>0</td>
+                <td><span class="badge badge-muted"><span class="badge__dot badge__dot--muted"></span> 已停止</span></td>
+                <td><span class="action-link action-link--muted">--</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 表格底部信息 -->
+        <div style="text-align: center; padding: 16px 0; font-size: 12px; color: var(--brand-muted-foreground);">
+          共 6 条记录，最多保留 1000 条
+        </div>
+
+
+        <!-- ============================================================ -->
+        <!-- 空状态变体 1：无历史记录                                      -->
+        <!-- ============================================================ -->
+        <div class="view-separator"></div>
+        <div class="view-label">▼ 空状态变体 1：无历史记录</div>
+
+        <div class="card" style="padding: 20px;">
+          <div class="empty-state">
+            <i data-lucide="history" style="width: 32px; height: 32px;" class="empty-state-icon"></i>
+            <div class="empty-state-title">尚无历史记录</div>
+            <div class="empty-state-desc">执行脱敏或恢复操作后，记录将自动出现在这里</div>
+          </div>
+        </div>
+
+
+        <!-- ============================================================ -->
+        <!-- 空状态变体 2：历史记录已关闭                                   -->
+        <!-- ============================================================ -->
+        <div class="view-separator"></div>
+        <div class="view-label">▼ 空状态变体 2：历史记录已关闭（设置中关闭了开关）</div>
+
+        <div class="card" style="padding: 20px; border-left: 3px solid var(--brand-state-info);">
+          <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <i data-lucide="info" style="width: 20px; height: 20px; color: var(--brand-state-info); flex-shrink: 0; margin-top: 2px;"></i>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--brand-foreground); margin-bottom: 4px;">历史记录已关闭</div>
+              <div style="font-size: 12px; color: var(--brand-muted); margin-bottom: 12px;">
+                当前未开启工作历史记录。如需记录脱敏/恢复操作的文件和密码本信息，请前往设置页开启。
+              </div>
+              <button class="btn-secondary">
+                <i data-lucide="settings" style="width: 16px; height: 16px;"></i> 前往设置
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

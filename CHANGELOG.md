@@ -25,6 +25,44 @@
 - `state.py` 新增字段级值校验与原子保存
 - 测试新增 13 个回归用例（A-01~A-07 全覆盖）
 
+## v0.1.0-beta.3 (2026-08-08)
+
+密码本库管理、版本历史、历史记录页面与集成，以及白屏修复。
+
+### 新功能
+
+- **密码本库管理**：多密码本集中管理，支持创建、编辑、复制、重命名、删除、导入/导出。库密码本存储在用户数据目录 `codebooks/` 下，独立于文件系统密码本
+- **版本快照**：每次保存密码本自动生成版本快照（最多保留 20 个），支持查看变更摘要和一键恢复到任意历史版本
+- **历史记录页面**：自动记录每次脱敏/恢复任务（最多 1000 条），支持按日期、模式、文件名筛选和查看详情。可在设置中开启/关闭历史记录
+- **密码本编辑器增强**：支持批量粘贴规则、规则增删改实时同步、正则规则自动补全前缀
+- **工作台联动**：从库加载密码本后自动跳转工作台，PathPicker 显示库密码本名称
+
+### 修复
+
+- **页面切换白屏（P1）**：`_show_page` 在 `pack_forget` 旧页面前未构建新页面，导致短暂白屏。改为先构建+`on_show`，再切换可见性
+- **Tab 切换白屏**：`_show_tab` 同样存在先隐藏后渲染的问题，采用相同修复策略
+- **`update_idletasks()` 强制重绘**：Tk 仅将重绘事件加入队列，`pack()` 后需调用 `update_idletasks()` 强制立即处理几何计算和画布重绘
+- **历史记录阻塞 UI 重绘**：`record_history` 的 `fsync` 磁盘 I/O 与页面切换在同一事件批次执行，导致白屏。改用 `tk_root.after(50)` 延迟到独立事件
+- **保存后规则消失**：`_on_save` 重新加载密码本后未同步 `_edit_rules`，导致编辑器空白。新增 `_sync_edit_rules()` 方法在增删改前同步 UI 输入
+- **加载密码本跳转工作台**：`_on_edit`/`_on_create` 调用 `_on_load` 会意外跳转工作台。新增 `navigate` 参数控制是否跳转
+- **批量粘贴静默丢弃无效行**：添加 `skipped` 计数，丢弃行数 > 0 时弹出警告
+- **测试数据污染历史记录**：`conftest.py` autouse fixture 隔离 `user_data_dir`，`test_ui_controller.py` 设置 `history_enabled = False`
+
+### 变更
+
+- 新增 `docmask/services/codebook_library.py`（CodebookLibrary 多密码本管理）
+- 新增 `docmask/services/history_store.py`（HistoryStore JSONL 存储）
+- 新增 `docmask/ui/pages/history_page.py`（历史记录页面）
+- 新增 `tests/conftest.py`（测试数据隔离）
+- 新增 `tests/test_codebook_library.py`、`tests/test_codebook_edit.py`、`tests/test_history_store.py`
+- 新增 SVG 图标：`check.svg`、`copy.svg`、`download.svg`、`history.svg`
+- `docmask/ui/app.py`：`_show_page` 重排执行顺序 + `update_idletasks()`
+- `docmask/ui/controller.py`：新增 `_schedule_record_history`、`save_codebook_to_library`、`load_library_codebook`、`rename_codebook` 等方法
+- `docmask/ui/pages/codebook_page.py`：重构为库管理 + 编辑器 + 版本三 Tab 布局
+- `docmask/ui/pages/workbench_page.py`：库密码本名称联动 PathPicker
+- `docmask/ui/state.py`：新增 `history_enabled`、`edit_rules`、`library_id`、`library_name` 等字段
+- 版本号升级至 `0.1.0-beta.3`
+
 ## v0.1.0-beta.2 (2026-08-08)
 
 ### 修复

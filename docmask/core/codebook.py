@@ -1,6 +1,7 @@
 """密码本解析与校验模块"""
 import os
 import re
+from dataclasses import dataclass
 
 # A-02 ReDoS 防护：优先使用支持 timeout 的 regex 模块，回退到标准 re。
 # 有 regex 模块时，每条正则在编译时绑定超时，finditer/search 自动受限；
@@ -15,6 +16,33 @@ except ImportError:
     _REGEX_TIMEOUT_SECONDS = None
 
 from docmask.config import CODEBOOK_SEPARATOR, REGEX_PREFIX, COMMENT_PREFIX
+
+
+@dataclass
+class CodebookRule:
+    """密码本规则行（编辑器交互用）"""
+    rule_type: str          # "exact" | "regex"
+    original: str           # 原文（正则规则含 regex: 前缀的完整形式）
+    replacement: str        # 脱敏词
+    comment: str = ""       # 可选行注释（不含 # 前缀）
+
+    @property
+    def display_original(self) -> str:
+        """编辑器显示用原文（正则规则去掉 regex: 前缀）"""
+        if self.rule_type == "regex" and self.original.startswith(REGEX_PREFIX):
+            return self.original[len(REGEX_PREFIX):]
+        return self.original
+
+
+def _render_rules(rules: list[CodebookRule]) -> str:
+    """将 CodebookRule 列表序列化为密码本文本。"""
+    lines: list[str] = []
+    for rule in rules:
+        if rule.comment:
+            for comment_line in rule.comment.split("\n"):
+                lines.append(f"{COMMENT_PREFIX} {comment_line}" if comment_line else COMMENT_PREFIX)
+        lines.append(f"{rule.original}{CODEBOOK_SEPARATOR}{rule.replacement}")
+    return "\n".join(lines) + "\n" if lines else ""
 
 
 class CodebookError(Exception):
@@ -32,8 +60,9 @@ class Codebook:
         self.reverse_map: dict[str, str] = {}  # 脱敏词 → 原文
         self._sorted_keys: list[str] = []  # 按长度降序排列的原文列表（精确规则）
         self.regex_rules: list[tuple[re.Pattern, str]] = []  # (编译后正则, 脱敏词)
-        self._line_numbers: dict[str, int] = {}  # 规则原文 → 行号（用于错误提示）
+        self._line_numbers: dict[str, int] = {}  # 规则原文 -> 行号（用于错误提示）
         self._regex_line_numbers: list[int] = []
+        self._raw_content: str = ""  # 最近一次 _parse 的原始内容（用于 to_rules/render）
 
     def load(self) -> None:
         """读取并解析密码本文件，自动检测编码"""
@@ -65,6 +94,7 @@ class Codebook:
         self.regex_rules.clear()
         self._line_numbers.clear()
         self._regex_line_numbers.clear()
+        self._raw_content = content
 
         lines = content.splitlines()
         seen_rules: dict[str, int] = {}
@@ -244,6 +274,80 @@ class Codebook:
     def get_regex_line_numbers(self) -> list[int]:
         """获取正则规则对应的密码本行号列表（用于 ReDoS 超时错误报告）。"""
         return list(self._regex_line_numbers)
+
+    # ======================== 编辑器支持 ========================
+
+    def to_rules(self) -> list[CodebookRule]:
+        """将当前已解析的规则导出为 CodebookRule 列表，保留注释行和行序。
+
+        从最近一次 _parse 的原始内容派生，保持行序和注释。
+        注释行关联到紧随其后的规则（comment 字段）；连续注释合并为多行。
+        """
+        rules: list[CodebookRule] = []
+        pending_comment = ""
+        for raw_line in self._raw_content.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            if line.startswith(COMMENT_PREFIX):
+                comment_text = line[len(COMMENT_PREFIX):].strip()
+                if pending_comment:
+                    pending_comment += "\n" + comment_text
+                else:
+                    pending_comment = comment_text
+                continue
+            if CODEBOOK_SEPARATOR not in line:
+                continue
+            parts = line.split(CODEBOOK_SEPARATOR, 1)
+            original = parts[0].strip()
+            replacement = parts[1].strip()
+            if not original or not replacement:
+                continue
+            rule_type = "regex" if original.startswith(REGEX_PREFIX) else "exact"
+            rules.append(CodebookRule(
+                rule_type=rule_type,
+                original=original,
+                replacement=replacement,
+                comment=pending_comment,
+            ))
+            pending_comment = ""
+        return rules
+
+    def update_rules(self, rules: list[CodebookRule]) -> list[str]:
+        """用新的规则列表替换当前所有规则，执行增量校验。
+
+        流程：
+        1. 将 rules 序列化为密码本文本（_render_rules）
+        2. 调用 _parse 重新解析
+        3. 调用 validate 返回校验消息
+
+        解析阶段的结构性错误（重复定义、无效正则等）会被捕获并
+        转为 "ERROR: ..." 消息返回，不抛异常（编辑器友好）。
+        """
+        text = _render_rules(rules)
+        try:
+            self._parse(text)
+        except CodebookError as e:
+            return [f"ERROR: {e}"]
+        return self.validate()
+
+    def render(self) -> str:
+        """序列化为密码本文本格式（UTF-8 字符串）。
+
+        格式与 load() 读取的格式完全一致，保证往返一致性。
+        """
+        return _render_rules(self.to_rules())
+
+    def save(self, path: str) -> None:
+        """将 render() 结果写入文件。
+
+        使用 staged_output_path 原子不覆盖提交（A-04 铁律）。
+        """
+        from docmask.utils.file_utils import staged_output_path
+        content = self.render()
+        with staged_output_path(path) as temp_path:
+            with open(temp_path, "w", encoding="utf-8") as f:
+                f.write(content)
 
     @property
     def exact_rule_count(self) -> int:

@@ -36,6 +36,7 @@ def _make_state(tmp_path: Path, output_same_dir: bool = True) -> AppState:
     state.codebook.codebook = codebook
     state.codebook.valid = True
     state.files = []
+    state.history_enabled = False  # 防止测试写入真实历史记录
     state.output_same_dir = output_same_dir
     state.output_dir = str(tmp_path / "output") if not output_same_dir else None
     if state.output_dir:

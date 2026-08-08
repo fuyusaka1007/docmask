@@ -98,6 +98,7 @@ RADIUS_CARD = 12      # 卡片圆角
 RADIUS_BTN = 8        # 按钮圆角
 RADIUS_INPUT = 8      # 输入框圆角
 RADIUS_PILL = 999     # 徽章圆角
+RADIUS_SM = 4         # 小圆角（标签、小按钮）
 
 # 内容宽度
 MAX_WIDTH_WORKBENCH = 860

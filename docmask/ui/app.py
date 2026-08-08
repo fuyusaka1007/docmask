@@ -17,6 +17,7 @@ from docmask.ui.widgets.sidebar import Sidebar
 from docmask.ui.widgets.dialogs import show_confirm
 from docmask.ui.pages.workbench_page import WorkbenchPage
 from docmask.ui.pages.codebook_page import CodebookPage
+from docmask.ui.pages.history_page import HistoryPage
 from docmask.ui.pages.results_page import ResultsPage
 from docmask.ui.pages.settings_page import SettingsPage
 from docmask.ui.diagnostics import scroll_diag
@@ -89,6 +90,11 @@ class DocMaskApp(ctk.CTk):
             ),
             "codebook": lambda: CodebookPage(
                 self._content_frame, self.app_state, self.controller,
+                on_navigate=self._show_page,
+            ),
+            "history": lambda: HistoryPage(
+                self._content_frame, self.app_state, self.controller,
+                on_navigate=self._show_page,
             ),
             "results": lambda: ResultsPage(
                 self._content_frame, self.app_state, self.controller,
@@ -135,23 +141,30 @@ class DocMaskApp(ctk.CTk):
         self._content_frame.pack(side="left", fill="both", expand=True)
 
     def _show_page(self, page_id: str):
-        """切换页面"""
+        """切换页面
+
+        优化：先构建目标页面并调用 on_show（旧页面仍可见），
+        最后才切换可见性，避免页面切换白屏。
+        """
         if page_id == self._current_page:
             return
 
-        # 隐藏当前页面
-        if self._current_page in self._pages:
-            self._pages[self._current_page].pack_forget()
-
-        # 显示新页面
+        # 1. 构建目标页面（如果尚未构建），旧页面仍可见
         if page_id not in self._pages and page_id in self._page_factories:
             self._pages[page_id] = self._page_factories[page_id]()
+
+        # 2. 调用 on_show（在旧页面仍可见时准备新页面内容）
         if page_id in self._pages:
             page = self._pages[page_id]
-            page.pack(fill="both", expand=True)
-            # 调用 on_show 回调
             if hasattr(page, "on_show"):
                 page.on_show()
+
+        # 3. 切换可见性 + 强制立即重绘
+        if self._current_page in self._pages:
+            self._pages[self._current_page].pack_forget()
+        if page_id in self._pages:
+            self._pages[page_id].pack(fill="both", expand=True)
+            self.update_idletasks()  # 强制 Tk 立即处理几何计算和画布重绘
 
         self._current_page = page_id
         self._sidebar.set_active(page_id)

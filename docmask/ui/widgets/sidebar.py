@@ -15,6 +15,7 @@ class Sidebar(ctk.CTkFrame):
     NAV_ITEMS = [
         ("workbench", "workflow", "工作台"),
         ("codebook", "book-open", "密码本"),
+        ("history", "history", "历史记录"),
         ("results", "clipboard-list", "任务结果"),
         ("settings", "settings", "设置与帮助"),
     ]

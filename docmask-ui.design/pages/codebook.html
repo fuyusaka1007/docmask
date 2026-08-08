@@ -1,407 +1,532 @@
 <!DOCTYPE html>
 <html lang="zh" class="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>密码本</title>
-    <style id="theme-vars">
-/* DocMask UI — Design Tokens */
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>密码本 - 三视图（beta3 设计预览）</title>
+
+  <!--
+    ============================================================
+    DocMask beta3 密码本页面设计预览
+    ============================================================
+    本文件展示密码本页面的三个 Tab 视图，供无上下文的大模型参考实现 UI。
+
+    页面结构：
+      侧边栏（220px 固定宽度，深色背景） + 内容区（可滚动）
+
+    内容区结构（自上而下）：
+      1. 页头：标题"密码本" + 副标题
+      2. Tab 切换栏：[我的密码本] [编辑器] [版本记录]
+      3. 三个 Tab 内容区域（本预览同时展示全部三个视图，实际 UI 仅显示当前 Tab）
+
+    设计规范：
+      - 字体：PingFang SC（macOS）/ Microsoft YaHei UI（Windows）/ Noto Sans CJK SC（Linux）
+      - 字号：标题 20px bold / 区块标题 16px bold / 正文 14px / 标签 13px / 辅助 12px
+      - 间距：S1=4px S2=8px S3=12px S4=16px S5=24px S6=32px
+      - 卡片：白底 #FFFFFF / 圆角 12px / 边框 1px #DCE3EA / 阴影 0 1px 2px rgba(15,23,42,0.05)
+      - 按钮-主：背景 #168AAD / 文字 #FFFFFF / 高 42px / 圆角 8px / 字号 14px
+      - 按钮-次：背景 #FFFFFF / 文字 #172033 / 边框 1px #DCE3EA / 高 36px / 圆角 8px / 字号 13px
+      - 徽章：圆角 999px / 字号 12px / 内边距 2px 10px
+      - 图标：Lucide 图标库，导航 20px / 卡片内 16px / 辅助 14px
+    ============================================================
+  -->
+
+  <style id="theme-vars">
 :root {
-  /* Brand */
   --brand-primary: #168AAD;
   --brand-primary-hover: #11728F;
   --brand-primary-foreground: #FFFFFF;
-
-  /* Surface */
   --brand-background: #F4F7FA;
   --brand-foreground: #172033;
   --brand-muted: #667085;
   --brand-muted-foreground: #9CA3AF;
   --brand-card: #FFFFFF;
   --brand-card-foreground: #172033;
-  --brand-popover: #FFFFFF;
-  --brand-popover-foreground: #172033;
   --brand-border: #DCE3EA;
-  --brand-input: #DCE3EA;
-  --brand-ring: #168AAD;
-
-  /* Sidebar */
   --brand-sidebar-bg: #0F1B2D;
   --brand-sidebar-fg: #DCE3EA;
-  --brand-sidebar-active-bg: rgba(22, 138, 173, 0.15);
-  --brand-sidebar-active-fg: #168AAD;
-
-  /* States */
   --brand-state-success: #168A5B;
   --brand-state-warning: #D68B16;
   --brand-state-error: #D94A4A;
   --brand-state-info: #3B82C4;
-
-  /* Radius */
   --brand-radius-sm: 4px;
   --brand-radius-md: 8px;
   --brand-radius-lg: 12px;
   --brand-radius-pill: 999px;
-
-  /* Shadows */
-  --brand-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
-  --brand-shadow-2: 0 8px 24px -8px rgba(15, 23, 42, 0.18);
-  --brand-shadow-3: 0 24px 60px -20px rgba(15, 23, 42, 0.30);
-
-  /* Spacing */
-  --brand-s-1: 4px;
-  --brand-s-2: 8px;
-  --brand-s-3: 12px;
-  --brand-s-4: 16px;
-  --brand-s-5: 24px;
-  --brand-s-6: 32px;
-  --brand-s-7: 48px;
-  --brand-s-8: 80px;
-
-  /* Typography */
-  --brand-font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  --brand-shadow-1: 0 1px 2px rgba(15,23,42,0.05), 0 1px 1px rgba(15,23,42,0.03);
+  --brand-font-family: "PingFang SC", "Microsoft YaHei UI", "Noto Sans CJK SC", system-ui, sans-serif;
   --brand-font-mono: "Cascadia Code", "Fira Code", "Consolas", monospace;
 }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+  <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+  <style>
+    body { margin: 0; font-family: var(--brand-font-family); background: var(--brand-background); color: var(--brand-foreground); }
 
-/* Secondary / Accent aliases — map to primary for free-explore compliance */
-:root {
-  --brand-secondary: var(--brand-background);
-  --brand-secondary-foreground: var(--brand-foreground);
-  --brand-accent: var(--brand-primary);
-  --brand-accent-foreground: var(--brand-primary-foreground);
-  --brand-destructive: var(--brand-state-error);
-  --brand-destructive-foreground: #FFFFFF;
-}
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
-    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
-    <style type="text/tailwindcss">
-  @theme inline {
-    --color-background: var(--brand-background);
-    --color-foreground: var(--brand-foreground);
-    --color-card: var(--brand-card);
-    --color-card-foreground: var(--brand-card-foreground);
-    --color-popover: var(--brand-popover);
-    --color-popover-foreground: var(--brand-popover-foreground);
-    --color-primary: var(--brand-primary);
-    --color-primary-foreground: var(--brand-primary-foreground);
-    --color-secondary: var(--brand-secondary);
-    --color-secondary-foreground: var(--brand-secondary-foreground);
-    --color-muted: var(--brand-muted);
-    --color-muted-foreground: var(--brand-muted-foreground);
-    --color-accent: var(--brand-accent);
-    --color-accent-foreground: var(--brand-accent-foreground);
-    --color-destructive: var(--brand-destructive);
-    --color-destructive-foreground: var(--brand-destructive-foreground);
-    --color-border: var(--brand-border);
-    --color-input: var(--brand-input);
-    --color-ring: var(--brand-ring);
-    --radius-sm: var(--brand-radius-sm);
-    --radius-md: var(--brand-radius-md);
-    --radius-lg: var(--brand-radius-lg);
-  }
-  @layer base {
-    body { background: var(--brand-background); color: var(--brand-foreground); }
-    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
-    th { @apply whitespace-nowrap; }
-  }
-    </style>
-    <style id="semantic-token-fallback">
-      .bg-background { background-color: var(--brand-background); }
-      .text-background { color: var(--brand-background); }
-      .border-background { border-color: var(--brand-background); }
-      .ring-background { --tw-ring-color: var(--brand-background); }
-      .bg-foreground { background-color: var(--brand-foreground); }
-      .text-foreground { color: var(--brand-foreground); }
-      .border-foreground { border-color: var(--brand-foreground); }
-      .ring-foreground { --tw-ring-color: var(--brand-foreground); }
-      .bg-card { background-color: var(--brand-card); }
-      .text-card { color: var(--brand-card); }
-      .border-card { border-color: var(--brand-card); }
-      .ring-card { --tw-ring-color: var(--brand-card); }
-      .bg-card-foreground { background-color: var(--brand-card-foreground); }
-      .text-card-foreground { color: var(--brand-card-foreground); }
-      .border-card-foreground { border-color: var(--brand-card-foreground); }
-      .ring-card-foreground { --tw-ring-color: var(--brand-card-foreground); }
-      .bg-popover { background-color: var(--brand-popover); }
-      .text-popover { color: var(--brand-popover); }
-      .border-popover { border-color: var(--brand-popover); }
-      .ring-popover { --tw-ring-color: var(--brand-popover); }
-      .bg-popover-foreground { background-color: var(--brand-popover-foreground); }
-      .text-popover-foreground { color: var(--brand-popover-foreground); }
-      .border-popover-foreground { border-color: var(--brand-popover-foreground); }
-      .ring-popover-foreground { --tw-ring-color: var(--brand-popover-foreground); }
-      .bg-primary { background-color: var(--brand-primary); }
-      .text-primary { color: var(--brand-primary); }
-      .border-primary { border-color: var(--brand-primary); }
-      .ring-primary { --tw-ring-color: var(--brand-primary); }
-      .bg-primary-foreground { background-color: var(--brand-primary-foreground); }
-      .text-primary-foreground { color: var(--brand-primary-foreground); }
-      .border-primary-foreground { border-color: var(--brand-primary-foreground); }
-      .ring-primary-foreground { --tw-ring-color: var(--brand-primary-foreground); }
-      .bg-secondary { background-color: var(--brand-secondary); }
-      .text-secondary { color: var(--brand-secondary); }
-      .border-secondary { border-color: var(--brand-secondary); }
-      .ring-secondary { --tw-ring-color: var(--brand-secondary); }
-      .bg-secondary-foreground { background-color: var(--brand-secondary-foreground); }
-      .text-secondary-foreground { color: var(--brand-secondary-foreground); }
-      .border-secondary-foreground { border-color: var(--brand-secondary-foreground); }
-      .ring-secondary-foreground { --tw-ring-color: var(--brand-secondary-foreground); }
-      .bg-muted { background-color: var(--brand-muted); }
-      .text-muted { color: var(--brand-muted); }
-      .border-muted { border-color: var(--brand-muted); }
-      .ring-muted { --tw-ring-color: var(--brand-muted); }
-      .bg-muted-foreground { background-color: var(--brand-muted-foreground); }
-      .text-muted-foreground { color: var(--brand-muted-foreground); }
-      .border-muted-foreground { border-color: var(--brand-muted-foreground); }
-      .ring-muted-foreground { --tw-ring-color: var(--brand-muted-foreground); }
-      .bg-accent { background-color: var(--brand-accent); }
-      .text-accent { color: var(--brand-accent); }
-      .border-accent { border-color: var(--brand-accent); }
-      .ring-accent { --tw-ring-color: var(--brand-accent); }
-      .bg-accent-foreground { background-color: var(--brand-accent-foreground); }
-      .text-accent-foreground { color: var(--brand-accent-foreground); }
-      .border-accent-foreground { border-color: var(--brand-accent-foreground); }
-      .ring-accent-foreground { --tw-ring-color: var(--brand-accent-foreground); }
-      .bg-destructive { background-color: var(--brand-destructive); }
-      .text-destructive { color: var(--brand-destructive); }
-      .border-destructive { border-color: var(--brand-destructive); }
-      .ring-destructive { --tw-ring-color: var(--brand-destructive); }
-      .bg-destructive-foreground { background-color: var(--brand-destructive-foreground); }
-      .text-destructive-foreground { color: var(--brand-destructive-foreground); }
-      .border-destructive-foreground { border-color: var(--brand-destructive-foreground); }
-      .ring-destructive-foreground { --tw-ring-color: var(--brand-destructive-foreground); }
-      .bg-border { background-color: var(--brand-border); }
-      .text-border { color: var(--brand-border); }
-      .border-border { border-color: var(--brand-border); }
-      .ring-border { --tw-ring-color: var(--brand-border); }
-      .bg-input { background-color: var(--brand-input); }
-      .text-input { color: var(--brand-input); }
-      .border-input { border-color: var(--brand-input); }
-      .ring-input { --tw-ring-color: var(--brand-input); }
-      .bg-ring { background-color: var(--brand-ring); }
-      .text-ring { color: var(--brand-ring); }
-      .border-ring { border-color: var(--brand-ring); }
-      .ring-ring { --tw-ring-color: var(--brand-ring); }
-    </style>
-    <style>
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      [data-icon] {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        -webkit-mask-size: contain;
-        mask-size: contain;
-        -webkit-mask-repeat: no-repeat;
-        mask-repeat: no-repeat;
-        -webkit-mask-position: center;
-        mask-position: center;
-        background-color: currentColor;
-      }
-    </style>
+    /* 布局 */
+    .app-shell { display: flex; height: 100vh; overflow: hidden; }
+    .content-area { flex: 1; overflow-y: auto; }
+
+    /* 卡片 */
+    .card { background: var(--brand-card); border-radius: var(--brand-radius-lg); box-shadow: var(--brand-shadow-1); border: 1px solid var(--brand-border); }
+
+    /* 按钮 */
+    .btn-primary { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 20px; background: var(--brand-primary); color: var(--brand-primary-foreground); border: none; border-radius: var(--brand-radius-md); font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .btn-primary:hover { background: var(--brand-primary-hover); }
+    .btn-secondary { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; background: var(--brand-card); color: var(--brand-foreground); border: 1px solid var(--brand-border); border-radius: var(--brand-radius-md); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .btn-secondary:hover { background: var(--brand-background); }
+    .btn-danger { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; background: var(--brand-card); color: var(--brand-state-error); border: 1px solid var(--brand-border); border-radius: var(--brand-radius-md); font-size: 13px; font-weight: 500; cursor: pointer; }
+    .btn-danger:hover { border-color: var(--brand-state-error); }
+
+    /* 徽章 */
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: var(--brand-radius-pill); font-size: 12px; font-weight: 500; }
+    .badge-success { background: rgba(22,138,91,0.1); color: var(--brand-state-success); }
+    .badge-warning { background: rgba(214,139,22,0.1); color: var(--brand-state-warning); }
+    .badge-error   { background: rgba(217,74,74,0.1); color: var(--brand-state-error); }
+    .badge-info    { background: rgba(59,130,196,0.1); color: var(--brand-state-info); }
+    .badge-muted   { background: rgba(102,112,133,0.1); color: var(--brand-muted); }
+
+    /* Tab 栏 */
+    .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--brand-border); margin-bottom: 24px; }
+    .tab-item { padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--brand-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+    .tab-item:hover { color: var(--brand-foreground); }
+    .tab-item.active { color: var(--brand-primary); border-bottom-color: var(--brand-primary); }
+
+    /* 表格 */
+    .rule-table { width: 100%; border-collapse: collapse; }
+    .rule-table th { text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; color: var(--brand-muted); border-bottom: 1px solid var(--brand-border); }
+    .rule-table td { padding: 0 12px; height: 48px; font-size: 13px; color: var(--brand-foreground); border-bottom: 1px solid var(--brand-border); }
+    .rule-table tbody tr:hover td { background: rgba(22,138,173,0.04); }
+
+    /* 输入框 */
+    .input-cell { width: 100%; height: 32px; border: 1px solid var(--brand-border); border-radius: var(--brand-radius-sm); padding: 0 8px; font-size: 13px; color: var(--brand-foreground); background: var(--brand-card); }
+    .input-cell:focus { outline: none; border-color: var(--brand-primary); box-shadow: 0 0 0 2px rgba(22,138,173,0.15); }
+
+    /* 类型标签 */
+    .type-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--brand-radius-sm); font-size: 11px; font-weight: 600; }
+    .type-exact { background: rgba(22,138,91,0.1); color: var(--brand-state-success); }
+    .type-regex { background: rgba(214,139,22,0.1); color: var(--brand-state-warning); }
+
+    /* 版本时间线 */
+    .version-item { display: flex; gap: 16px; padding: 16px 0; }
+    .version-item + .version-item { border-top: 1px solid var(--brand-border); }
+    .version-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--brand-primary); flex-shrink: 0; margin-top: 4px; }
+    .version-dot.current { background: var(--brand-state-success); box-shadow: 0 0 0 4px rgba(22,138,91,0.15); }
+
+    /* 空状态 */
+    .empty-state { text-align: center; padding: 48px 0; }
+    .empty-state-icon { color: var(--brand-muted-foreground); margin-bottom: 12px; }
+    .empty-state-title { font-size: 14px; font-weight: 500; color: var(--brand-muted); margin-bottom: 4px; }
+    .empty-state-desc { font-size: 12px; color: var(--brand-muted-foreground); }
+
+    /* 分隔线 */
+    .separator { height: 1px; background: var(--brand-border); margin: 16px 0; }
+
+    /* 代码块 */
+    .code-block { background: var(--brand-background); border: 1px solid var(--brand-border); border-radius: var(--brand-radius-md); padding: 10px 14px; font-family: var(--brand-font-mono); font-size: 12px; color: var(--brand-foreground); }
+
+    /* 视图分隔（仅预览用，实际 UI 不需要） */
+    .view-separator { border-top: 2px dashed var(--brand-border); margin: 48px 0; padding-top: 24px; }
+    .view-label { font-size: 12px; font-weight: 600; color: var(--brand-muted-foreground); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+  </style>
 </head>
-<body class="min-h-screen font-sans antialiased">
-    <style id="critical-layout">
-      .app-shell { display: flex; height: 100vh; overflow: hidden; }
-      .content-area { flex: 1; overflow-y: auto; background-color: var(--brand-background); }
-      .card { background-color: var(--brand-card); border-radius: var(--brand-radius-lg); box-shadow: var(--brand-shadow-1); border: 1px solid var(--brand-border); }
-      .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background-color: var(--brand-primary); color: var(--brand-primary-foreground); height: 42px; padding: 0 20px; border-radius: var(--brand-radius-md); font-weight: 500; font-size: 14px; cursor: pointer; border: none; transition: background-color 0.15s; white-space: nowrap; }
-      .btn-primary:hover { background-color: var(--brand-primary-hover); }
-      .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background-color: var(--brand-card); color: var(--brand-foreground); height: 36px; padding: 0 16px; border-radius: var(--brand-radius-md); border: 1px solid var(--brand-border); font-weight: 500; font-size: 13px; cursor: pointer; transition: background-color 0.15s; white-space: nowrap; }
-      .btn-secondary:hover { background-color: var(--brand-background); }
-      .badge-success { display: inline-flex; align-items: center; gap: 4px; background-color: rgba(22,138,91,0.1); color: var(--brand-state-success); font-size: 12px; font-weight: 500; padding: 2px 10px; border-radius: var(--brand-radius-pill); }
-      .badge-warning { display: inline-flex; align-items: center; gap: 4px; background-color: rgba(214,139,22,0.1); color: var(--brand-state-warning); font-size: 12px; font-weight: 500; padding: 2px 10px; border-radius: var(--brand-radius-pill); }
-      .stat-card-teal { border-left: 3px solid var(--brand-primary); }
-      .stat-card-amber { border-left: 3px solid var(--brand-state-warning); }
-      .stat-card-info { border-left: 3px solid var(--brand-state-info); }
-      .nav-item:hover { background-color: rgba(22,138,173,0.08); }
-      .validation-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; font-size: 14px; }
-      .validation-item + .validation-item { border-top: 1px solid var(--brand-border); }
-      .dot-success { width: 8px; height: 8px; border-radius: 50%; background-color: var(--brand-state-success); flex-shrink: 0; margin-top: 6px; }
-      .dot-warning { width: 8px; height: 8px; border-radius: 50%; background-color: var(--brand-state-warning); flex-shrink: 0; margin-top: 6px; }
-      .dot-info { width: 8px; height: 8px; border-radius: 50%; background-color: var(--brand-state-info); flex-shrink: 0; margin-top: 6px; }
-      .guide-details summary { cursor: pointer; font-weight: 500; font-size: 14px; color: var(--brand-primary); padding: 8px 0; list-style: none; }
-      .guide-details summary::-webkit-details-marker { display: none; }
-      .guide-details summary::before { content: '▸ '; display: inline-block; transition: transform 0.2s; font-size: 12px; }
-      .guide-details[open] summary::before { transform: rotate(90deg); }
-      .code-block { background-color: #F4F7FA; border: 1px solid var(--brand-border); border-radius: var(--brand-radius-md); padding: 12px 16px; font-family: var(--brand-font-mono); font-size: 13px; color: var(--brand-foreground); overflow-x: auto; }
-    </style>
-    <main class="app-shell">
-      <!-- Shared Sidebar -->
-      <aside class="w-[220px] flex-shrink-0 flex flex-col h-full" style="background-color: #0F1B2D;">
-        <div class="px-5 pt-6 pb-4">
-          <div class="flex items-center gap-2">
-            <i data-lucide="shield-check" class="w-6 h-6" style="color: #168AAD;"></i>
-            <span class="text-base font-semibold" style="color: #FFFFFF;">DocMask</span>
-          </div>
-          <p class="text-xs mt-1" style="color: #667085;">本地文档保护</p>
+
+<body>
+  <div class="app-shell">
+
+    <!-- ======================== 侧边栏 ======================== -->
+    <!-- 220px 固定宽度，深色背景 #0F1B2D，包含品牌 Logo + 导航项 + 底部信息 -->
+    <aside style="width: 220px; flex-shrink: 0; display: flex; flex-direction: column; height: 100%; background: var(--brand-sidebar-bg);">
+      <!-- 品牌区 -->
+      <div style="padding: 24px 20px 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="shield-check" style="width: 24px; height: 24px; color: #168AAD;"></i>
+          <span style="font-size: 16px; font-weight: 600; color: #FFFFFF;">DocMask</span>
         </div>
-        <nav class="flex-1 px-3 space-y-1">
-          <a data-dom-id="nav-workbench" href="#" class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors" style="color: #DCE3EA;">
-            <i data-lucide="workflow" class="w-5 h-5"></i> 工作台
-          </a>
-          <a data-dom-id="nav-codebook" href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors" style="background-color: rgba(22,138,173,0.15); color: #168AAD; border-left: 3px solid #168AAD;">
-            <i data-lucide="book-open" class="w-5 h-5"></i> 密码本
-          </a>
-          <a data-dom-id="nav-results" href="#" class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors" style="color: #DCE3EA;">
-            <i data-lucide="clipboard-list" class="w-5 h-5"></i> 任务结果
-          </a>
-          <a data-dom-id="nav-settings" href="#" class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors" style="color: #DCE3EA;">
-            <i data-lucide="settings" class="w-5 h-5"></i> 设置与帮助
-          </a>
-        </nav>
-        <div class="px-5 py-4 border-t" style="border-color: rgba(255,255,255,0.08);">
-          <div class="flex items-center gap-2 text-xs" style="color: #667085;">
-            <i data-lucide="shield" class="w-3.5 h-3.5"></i> 纯本地运行
-          </div>
-          <p class="text-xs mt-0.5" style="color: #4B5563;">文件不会上传</p>
-          <p class="text-xs mt-1" style="color: #4B5563;">v1.0.0</p>
-        </div>
-      </aside>
-
-      <!-- Content Area -->
-      <div class="content-area">
-        <div class="px-8 py-6 max-w-[960px] mx-auto">
-
-          <!-- Page Header -->
-          <div class="flex items-center justify-between mb-6">
-            <div>
-              <h1 class="text-xl font-semibold" style="color: var(--brand-foreground);">密码本</h1>
-              <p class="text-sm mt-1" style="color: var(--brand-muted);">校验规则完整性，提前发现不可逆风险</p>
-            </div>
-            <button data-dom-id="btn-select-codebook" class="btn-primary">
-              <i data-lucide="folder-open" class="w-4 h-4"></i> 选择密码本文件
-            </button>
-          </div>
-
-          <!-- Section 1: Current Codebook Card -->
-          <div class="card p-5 mb-5">
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center gap-3">
-                <i data-lucide="file-text" class="w-5 h-5" style="color: var(--brand-primary);"></i>
-                <span class="text-base font-semibold" style="color: var(--brand-foreground);">codebook.txt</span>
-                <span class="badge-success">
-                  <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> 校验通过
-                </span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2 text-sm mb-3" style="color: var(--brand-muted);">
-              <i data-lucide="folder" class="w-4 h-4"></i>
-              <span>D:\DocMask\codebook.txt</span>
-            </div>
-            <div class="flex items-center gap-4 text-xs mb-4" style="color: var(--brand-muted);">
-              <span>42 条精确规则</span>
-              <span class="w-px h-3" style="background-color: var(--brand-border);"></span>
-              <span>2 条正则规则</span>
-              <span class="w-px h-3" style="background-color: var(--brand-border);"></span>
-              <span>UTF-8</span>
-              <span class="w-px h-3" style="background-color: var(--brand-border);"></span>
-              <span>刚刚校验</span>
-            </div>
-            <div class="flex items-center gap-3">
-              <button data-dom-id="btn-revalidate" class="btn-secondary">
-                <i data-lucide="refresh-cw" class="w-4 h-4"></i> 重新校验
-              </button>
-              <button data-dom-id="btn-relocate" class="btn-secondary">
-                <i data-lucide="folder-search" class="w-4 h-4"></i> 在系统中定位
-              </button>
-              <button data-dom-id="btn-replace" class="btn-secondary">
-                <i data-lucide="file-input" class="w-4 h-4"></i> 更换文件
-              </button>
-            </div>
-          </div>
-
-          <!-- Section 2: Summary Stats -->
-          <div class="grid grid-cols-3 gap-4 mb-5">
-            <!-- Card 1: Reversible Rules -->
-            <div class="card stat-card-teal p-4">
-              <div class="text-xs font-medium mb-1" style="color: var(--brand-muted);">可逆规则</div>
-              <div class="text-2xl font-bold mb-1" style="color: var(--brand-primary);">42</div>
-              <div class="text-xs" style="color: var(--brand-muted);">精确匹配</div>
-            </div>
-            <!-- Card 2: Regex Rules -->
-            <div class="card stat-card-amber p-4">
-              <div class="text-xs font-medium mb-1" style="color: var(--brand-muted);">正则规则</div>
-              <div class="text-2xl font-bold mb-1" style="color: var(--brand-state-warning);">2</div>
-              <div class="text-xs" style="color: var(--brand-muted);">不可逆</div>
-            </div>
-            <!-- Card 3: Risk Check -->
-            <div class="card stat-card-amber p-4">
-              <div class="text-xs font-medium mb-1" style="color: var(--brand-muted);">风险检查</div>
-              <div class="text-2xl font-bold mb-1" style="color: var(--brand-state-warning);">1 项警告</div>
-              <div class="text-xs" style="color: var(--brand-muted);">建议处理后再执行</div>
-            </div>
-          </div>
-
-          <!-- Section 3: Validation Results -->
-          <div class="card p-5 mb-5">
-            <h2 class="text-base font-semibold mb-1" style="color: var(--brand-foreground);">校验结果</h2>
-            <p class="text-xs mb-4" style="color: var(--brand-muted);">规则完整性分析</p>
-            <div class="validation-item">
-              <div class="dot-success"></div>
-              <span style="color: var(--brand-foreground);">未发现重复脱敏词</span>
-            </div>
-            <div class="validation-item">
-              <div class="dot-success"></div>
-              <span style="color: var(--brand-foreground);">未发现精确规则交叉冲突</span>
-            </div>
-            <div class="validation-item">
-              <div class="dot-success"></div>
-              <span style="color: var(--brand-foreground);">正则表达式格式有效</span>
-            </div>
-            <div class="validation-item">
-              <div class="dot-warning"></div>
-              <span style="color: var(--brand-foreground);">包含 2 条正则规则，匹配到的原始内容无法恢复</span>
-            </div>
-            <div class="validation-item">
-              <div class="dot-info"></div>
-              <span style="color: var(--brand-muted);">文档级脱敏词冲突将在添加待处理文件后检查</span>
-            </div>
-          </div>
-
-          <!-- Section 4: Safety Tips -->
-          <div class="card p-5 mb-5" style="border-left: 3px solid var(--brand-state-info);">
-            <div class="flex items-start gap-3">
-              <i data-lucide="info" class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: var(--brand-state-info);"></i>
-              <div>
-                <h3 class="text-sm font-semibold mb-1" style="color: var(--brand-foreground);">安全提示</h3>
-                <p class="text-sm" style="color: var(--brand-muted);">密码本包含原文与脱敏词的对应关系，请妥善保管。DocMask 不上传文件。</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section 5: Codebook Guide (collapsible) -->
-          <details class="guide-details card p-5 mb-5">
-            <summary class="flex items-center gap-2">
-              <i data-lucide="book-open" class="w-4 h-4" style="color: var(--brand-primary);"></i>
-              密码本格式指南
-            </summary>
-            <div class="mt-4 space-y-4">
-              <div>
-                <p class="text-sm font-medium mb-2" style="color: var(--brand-foreground);">精确匹配格式</p>
-                <div class="code-block">原文==>脱敏词</div>
-                <p class="text-xs mt-2" style="color: var(--brand-muted);">每行一条规则，使用 <code style="background-color: #F4F7FA; padding: 1px 6px; border-radius: 3px; font-family: var(--brand-font-mono);">==></code> 分隔原文和脱敏后的替换词。</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium mb-2" style="color: var(--brand-foreground);">正则匹配格式</p>
-                <div class="code-block">/正则表达式/==>脱敏词</div>
-                <p class="text-xs mt-2" style="color: var(--brand-state-warning);">正则规则匹配到的原始内容 <strong>不可恢复</strong>，请谨慎使用。</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium mb-2" style="color: var(--brand-foreground);">占位符建议</p>
-                <p class="text-sm" style="color: var(--brand-muted);">使用不易自然出现的专用标记，例如 <code style="background-color: #F4F7FA; padding: 1px 6px; border-radius: 3px; font-family: var(--brand-font-mono);">⟦DM-NAME-01⟧</code></p>
-              </div>
-              <div>
-                <p class="text-sm font-medium mb-2" style="color: var(--brand-state-warning);">注意事项</p>
-                <p class="text-sm" style="color: var(--brand-muted);">不建议使用 <code style="background-color: #F4F7FA; padding: 1px 6px; border-radius: 3px; font-family: var(--brand-font-mono);">%</code>、<code style="background-color: #F4F7FA; padding: 1px 6px; border-radius: 3px; font-family: var(--brand-font-mono);">!</code>、<code style="background-color: #F4F7FA; padding: 1px 6px; border-radius: 3px; font-family: var(--brand-font-mono);">￥</code> 等常见单字符符号作为数字替换值</p>
-              </div>
-            </div>
-          </details>
-
-        </div>
+        <p style="font-size: 12px; color: #667085; margin: 4px 0 0 0;">本地文档保护</p>
       </div>
-    </main>
-    <script>lucide.createIcons();</script>
+      <!-- 导航项 -->
+      <nav style="flex: 1; padding: 0 12px; display: flex; flex-direction: column; gap: 4px;">
+        <a style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; font-size: 14px; color: #DCE3EA; text-decoration: none;">
+          <i data-lucide="workflow" style="width: 20px; height: 20px;"></i> 工作台
+        </a>
+        <!-- 当前激活项：背景 rgba(22,138,173,0.15)，文字 #168AAD，左边框 3px -->
+        <a style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #168AAD; background: rgba(22,138,173,0.15); border-left: 3px solid #168AAD; text-decoration: none;">
+          <i data-lucide="book-open" style="width: 20px; height: 20px;"></i> 密码本
+        </a>
+        <a style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; font-size: 14px; color: #DCE3EA; text-decoration: none;">
+          <i data-lucide="history" style="width: 20px; height: 20px;"></i> 历史记录
+        </a>
+        <a style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; font-size: 14px; color: #DCE3EA; text-decoration: none;">
+          <i data-lucide="clipboard-list" style="width: 20px; height: 20px;"></i> 任务结果
+        </a>
+        <a style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; font-size: 14px; color: #DCE3EA; text-decoration: none;">
+          <i data-lucide="settings" style="width: 20px; height: 20px;"></i> 设置与帮助
+        </a>
+      </nav>
+      <!-- 底部 -->
+      <div style="padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #667085;">
+          <i data-lucide="shield" style="width: 14px; height: 14px;"></i> 纯本地运行
+        </div>
+        <p style="font-size: 12px; color: #4B5563; margin: 2px 0 0 0;">文件不会上传</p>
+        <p style="font-size: 12px; color: #4B5563; margin: 4px 0 0 0;">v0.1.0-beta.3</p>
+      </div>
+    </aside>
+
+    <!-- ======================== 内容区 ======================== -->
+    <div class="content-area">
+      <div style="max-width: 860px; margin: 0 auto; padding: 32px;">
+
+        <!-- 页头 -->
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px;">
+          <div>
+            <h1 style="font-size: 20px; font-weight: 700; color: var(--brand-foreground); margin: 0;">密码本</h1>
+            <p style="font-size: 12px; color: var(--brand-muted); margin: 4px 0 0 0;">管理密码本、编辑规则、查看版本历史</p>
+          </div>
+        </div>
+
+        <!-- Tab 切换栏 -->
+        <div class="tab-bar">
+          <div class="tab-item active">我的密码本</div>
+          <div class="tab-item">编辑器</div>
+          <div class="tab-item">版本记录</div>
+        </div>
+
+
+        <!-- ============================================================ -->
+        <!-- Tab 1: 我的密码本                                             -->
+        <!-- ============================================================ -->
+        <!-- 库列表卡片 + 操作按钮（新建/导入） + 选中后加载到工作台       -->
+        <!-- 每个密码本卡片显示：名称、规则数、更新时间、当前版本号        -->
+        <!-- 操作：选择(加载到工作台) / 编辑(跳转编辑器Tab) / 重命名 /    -->
+        <!--       删除 / 复制 / 导出                                     -->
+
+        <div class="view-label">▼ Tab 1: 我的密码本（库列表视图）</div>
+
+        <!-- 工具栏：新建 + 导入 -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <button class="btn-primary">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i> 新建密码本
+          </button>
+          <button class="btn-secondary">
+            <i data-lucide="file-input" style="width: 16px; height: 16px;"></i> 导入文件
+          </button>
+        </div>
+
+        <!-- 密码本卡片 1（选中状态） -->
+        <div class="card" style="padding: 20px; margin-bottom: 12px; border-left: 3px solid var(--brand-primary);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="book-open" style="width: 20px; height: 20px; color: var(--brand-primary);"></i>
+              <span style="font-size: 14px; font-weight: 600; color: var(--brand-foreground);">默认密码本</span>
+              <span class="badge badge-success">
+                <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i> 已加载
+              </span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-secondary"><i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> 编辑</button>
+              <button class="btn-secondary"><i data-lucide="copy" style="width: 16px; height: 16px;"></i> 复制</button>
+              <button class="btn-secondary"><i data-lucide="download" style="width: 16px; height: 16px;"></i> 导出</button>
+              <button class="btn-danger"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> 删除</button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 16px; font-size: 12px; color: var(--brand-muted);">
+            <span><i data-lucide="check" style="width: 14px; height: 14px; display: inline; vertical-align: -2px;"></i> 15 条精确规则</span>
+            <span style="width: 1px; height: 12px; background: var(--brand-border);"></span>
+            <span><i data-lucide="code" style="width: 14px; height: 14px; display: inline; vertical-align: -2px;"></i> 2 条正则规则</span>
+            <span style="width: 1px; height: 12px; background: var(--brand-border);"></span>
+            <span>3 个版本</span>
+            <span style="width: 1px; height: 12px; background: var(--brand-border);"></span>
+            <span>更新于 2026-08-08 15:01</span>
+          </div>
+        </div>
+
+        <!-- 密码本卡片 2（未选中） -->
+        <div class="card" style="padding: 20px; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="book-open" style="width: 20px; height: 20px; color: var(--brand-muted);"></i>
+              <span style="font-size: 14px; font-weight: 600; color: var(--brand-foreground);">项目A脱敏规则</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-secondary"><i data-lucide="check" style="width: 16px; height: 16px;"></i> 加载</button>
+              <button class="btn-secondary"><i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> 编辑</button>
+              <button class="btn-secondary"><i data-lucide="copy" style="width: 16px; height: 16px;"></i> 复制</button>
+              <button class="btn-danger"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> 删除</button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 16px; font-size: 12px; color: var(--brand-muted);">
+            <span>8 条精确规则</span>
+            <span style="width: 1px; height: 12px; background: var(--brand-border);"></span>
+            <span>0 条正则规则</span>
+            <span style="width: 1px; height: 12px; background: var(--brand-border);"></span>
+            <span>1 个版本</span>
+            <span style="width: 1px; height: 12px; background: var(--brand-border);"></span>
+            <span>更新于 2026-08-07 10:30</span>
+          </div>
+        </div>
+
+        <!-- 密码本卡片 3（未选中） -->
+        <div class="card" style="padding: 20px; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="book-open" style="width: 20px; height: 20px; color: var(--brand-muted);"></i>
+              <span style="font-size: 14px; font-weight: 600; color: var(--brand-foreground);">测试用密码本</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-secondary"><i data-lucide="check" style="width: 16px; height: 16px;"></i> 加载</button>
+              <button class="btn-secondary"><i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> 编辑</button>
+              <button class="btn-secondary"><i data-lucide="copy" style="width: 16px; height: 16px;"></i> 复制</button>
+              <button class="btn-danger"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> 删除</button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 16px; font-size: 12px; color: var(--brand-muted);">
+            <span>3 条精确规则</span>
+            <span style="width: 1px; height: 12px; background: var(--brand-border);"></span>
+            <span>1 条正则规则</span>
+            <span style="width: 1px; height: 12px; background: var(--brand-border);"></span>
+            <span>5 个版本</span>
+            <span style="width: 1px; height: 12px; background: var(--brand-border);"></span>
+            <span>更新于 2026-08-06 14:22</span>
+          </div>
+        </div>
+
+        <!-- 空状态（无密码本时显示） -->
+        <!--
+        <div class="card" style="padding: 20px;">
+          <div class="empty-state">
+            <i data-lucide="book-open" style="width: 32px; height: 32px;" class="empty-state-icon"></i>
+            <div class="empty-state-title">尚无密码本</div>
+            <div class="empty-state-desc">点击上方"新建密码本"或"导入文件"开始</div>
+          </div>
+        </div>
+        -->
+
+
+        <!-- ============================================================ -->
+        <!-- Tab 2: 编辑器                                                 -->
+        <!-- ============================================================ -->
+        <!-- 规则表格 + 添加规则按钮 + 实时校验徽标 + 保存/另存为          -->
+        <!-- 表格列：序号 | 类型 | 原文 | 脱敏词 | 注释 | 删除             -->
+        <!-- 正则规则的"原文"列显示去掉 regex: 前缀的内容                  -->
+        <!-- 实时校验：每次增删改后更新徽标（绿=通过 / 黄=警告 / 红=错误） -->
+
+        <div class="view-separator"></div>
+        <div class="view-label">▼ Tab 2: 编辑器（规则编辑视图）</div>
+
+        <!-- 当前编辑的密码本名称 + 校验徽标 -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="edit-3" style="width: 20px; height: 20px; color: var(--brand-primary);"></i>
+            <span style="font-size: 14px; font-weight: 600; color: var(--brand-foreground);">默认密码本</span>
+            <span style="font-size: 12px; color: var(--brand-muted);">— v-20260808_150100</span>
+          </div>
+          <!-- 校验徽标：绿色=通过 -->
+          <span class="badge badge-success">
+            <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i> 校验通过
+          </span>
+          <!-- 校验徽标变体（按需切换）：
+          <span class="badge badge-warning"><i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i> 2 项警告</span>
+          <span class="badge badge-error"><i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i> 1 项错误</span>
+          -->
+        </div>
+
+        <!-- 校验消息列表（有错误/警告时显示，通过时隐藏） -->
+        <!--
+        <div class="card" style="padding: 16px; margin-bottom: 16px; border-left: 3px solid var(--brand-state-warning);">
+          <div style="display: flex; align-items: flex-start; gap: 8px; padding: 4px 0;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--brand-state-warning); margin-top: 6px; flex-shrink: 0;"></div>
+            <span style="font-size: 14px; color: var(--brand-foreground);">包含 2 条正则规则，匹配到的原始内容无法恢复</span>
+          </div>
+        </div>
+        -->
+
+        <!-- 规则表格 -->
+        <div class="card" style="margin-bottom: 16px; overflow: hidden;">
+          <table class="rule-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;">#</th>
+                <th style="width: 60px;">类型</th>
+                <th>原文</th>
+                <th>脱敏词</th>
+                <th style="width: 120px;">注释</th>
+                <th style="width: 48px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 精确规则行 -->
+              <tr>
+                <td style="color: var(--brand-muted);">1</td>
+                <td><span class="type-tag type-exact">精确</span></td>
+                <td><input class="input-cell" value="张三" /></td>
+                <td><input class="input-cell" value="李四" /></td>
+                <td><input class="input-cell" value="" placeholder="可选" /></td>
+                <td><i data-lucide="trash-2" style="width: 16px; height: 16px; color: var(--brand-muted-foreground); cursor: pointer;"></i></td>
+              </tr>
+              <tr>
+                <td style="color: var(--brand-muted);">2</td>
+                <td><span class="type-tag type-exact">精确</span></td>
+                <td><input class="input-cell" value="北京市朝阳区" /></td>
+                <td><input class="input-cell" value="⟦DM-ADDR-01⟧" /></td>
+                <td><input class="input-cell" value="地址" /></td>
+                <td><i data-lucide="trash-2" style="width: 16px; height: 16px; color: var(--brand-muted-foreground); cursor: pointer;"></i></td>
+              </tr>
+              <tr>
+                <td style="color: var(--brand-muted);">3</td>
+                <td><span class="type-tag type-exact">精确</span></td>
+                <td><input class="input-cell" value="13800138000" /></td>
+                <td><input class="input-cell" value="⟦DM-PHONE-01⟧" /></td>
+                <td><input class="input-cell" value="" placeholder="可选" /></td>
+                <td><i data-lucide="trash-2" style="width: 16px; height: 16px; color: var(--brand-muted-foreground); cursor: pointer;"></i></td>
+              </tr>
+              <!-- 正则规则行（原文列显示去掉 regex: 前缀的正则表达式） -->
+              <tr>
+                <td style="color: var(--brand-muted);">4</td>
+                <td><span class="type-tag type-regex">正则</span></td>
+                <td><input class="input-cell" value="\d{11}" style="font-family: var(--brand-font-mono);" /></td>
+                <td><input class="input-cell" value="PHONE" /></td>
+                <td><input class="input-cell" value="手机号" /></td>
+                <td><i data-lucide="trash-2" style="width: 16px; height: 16px; color: var(--brand-muted-foreground); cursor: pointer;"></i></td>
+              </tr>
+              <tr>
+                <td style="color: var(--brand-muted);">5</td>
+                <td><span class="type-tag type-regex">正则</span></td>
+                <td><input class="input-cell" value="\d{4}-\d{2}-\d{2}" style="font-family: var(--brand-font-mono);" /></td>
+                <td><input class="input-cell" value="DATE" /></td>
+                <td><input class="input-cell" value="日期" /></td>
+                <td><i data-lucide="trash-2" style="width: 16px; height: 16px; color: var(--brand-muted-foreground); cursor: pointer;"></i></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 添加规则按钮 + 批量粘贴 -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <button class="btn-secondary">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i> 添加精确规则
+          </button>
+          <button class="btn-secondary">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i> 添加正则规则
+          </button>
+          <button class="btn-secondary">
+            <i data-lucide="clipboard" style="width: 16px; height: 16px;"></i> 批量粘贴
+          </button>
+        </div>
+
+        <!-- 底部操作：保存 / 另存为 -->
+        <div style="display: flex; gap: 12px;">
+          <button class="btn-primary">
+            <i data-lucide="save" style="width: 16px; height: 16px;"></i> 保存（生成新版本）
+          </button>
+          <button class="btn-secondary">
+            <i data-lucide="copy-plus" style="width: 16px; height: 16px;"></i> 另存为新密码本
+          </button>
+        </div>
+
+        <!-- 编辑器空状态（未加载密码本时） -->
+        <!--
+        <div class="card" style="padding: 20px;">
+          <div class="empty-state">
+            <i data-lucide="edit-3" style="width: 32px; height: 32px;" class="empty-state-icon"></i>
+            <div class="empty-state-title">未加载密码本</div>
+            <div class="empty-state-desc">请在"我的密码本"中选择或新建密码本</div>
+          </div>
+        </div>
+        -->
+
+
+        <!-- ============================================================ -->
+        <!-- Tab 3: 版本记录                                               -->
+        <!-- ============================================================ -->
+        <!-- 版本时间线 + 恢复按钮                                        -->
+        <!-- 每条：时间 + 版本号 + 规则数 + 变更摘要 + 恢复按钮           -->
+        <!-- 当前版本用绿色圆点 + "当前" 徽标标记                         -->
+
+        <div class="view-separator"></div>
+        <div class="view-label">▼ Tab 3: 版本记录（版本历史视图）</div>
+
+        <!-- 当前密码本名称 -->
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+          <i data-lucide="git-branch" style="width: 20px; height: 20px; color: var(--brand-primary);"></i>
+          <span style="font-size: 14px; font-weight: 600; color: var(--brand-foreground);">默认密码本</span>
+          <span style="font-size: 12px; color: var(--brand-muted);">— 共 3 个版本</span>
+        </div>
+
+        <!-- 版本时间线 -->
+        <div class="card" style="padding: 20px 24px;">
+
+          <!-- 版本 3（当前版本） -->
+          <div class="version-item">
+            <div class="version-dot current"></div>
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span style="font-size: 14px; font-weight: 600; color: var(--brand-foreground);">v-20260808_150100</span>
+                <span class="badge badge-success">当前</span>
+              </div>
+              <div style="font-size: 12px; color: var(--brand-muted); margin-bottom: 4px;">
+                2026-08-08 15:01:00 · 15 精确 + 2 正则
+              </div>
+              <div style="font-size: 13px; color: var(--brand-foreground);">+5 精确规则, +1 正则规则</div>
+            </div>
+          </div>
+
+          <!-- 版本 2 -->
+          <div class="version-item">
+            <div class="version-dot"></div>
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span style="font-size: 14px; font-weight: 600; color: var(--brand-foreground);">v-20260808_143022</span>
+              </div>
+              <div style="font-size: 12px; color: var(--brand-muted); margin-bottom: 4px;">
+                2026-08-08 14:30:22 · 10 精确 + 1 正则
+              </div>
+              <div style="font-size: 13px; color: var(--brand-foreground);">+3 精确规则</div>
+              <div style="margin-top: 8px;">
+                <button class="btn-secondary">
+                  <i data-lucide="rotate-ccw" style="width: 16px; height: 16px;"></i> 恢复此版本
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 版本 1（初始版本） -->
+          <div class="version-item">
+            <div class="version-dot"></div>
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span style="font-size: 14px; font-weight: 600; color: var(--brand-foreground);">v-20260808_140000</span>
+              </div>
+              <div style="font-size: 12px; color: var(--brand-muted); margin-bottom: 4px;">
+                2026-08-08 14:00:00 · 7 精确 + 0 正则
+              </div>
+              <div style="font-size: 13px; color: var(--brand-muted);">初始版本</div>
+              <div style="margin-top: 8px;">
+                <button class="btn-secondary">
+                  <i data-lucide="rotate-ccw" style="width: 16px; height: 16px;"></i> 恢复此版本
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 版本记录空状态 -->
+        <!--
+        <div class="card" style="padding: 20px;">
+          <div class="empty-state">
+            <i data-lucide="git-branch" style="width: 32px; height: 32px;" class="empty-state-icon"></i>
+            <div class="empty-state-title">尚无版本记录</div>
+            <div class="empty-state-desc">在编辑器中保存密码本后将自动生成版本快照</div>
+          </div>
+        </div>
+        -->
+
+      </div>
+    </div>
+  </div>
+
+  <script>lucide.createIcons();</script>
 </body>
 </html>

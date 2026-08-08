@@ -4,6 +4,18 @@
 
 ---
 
+## 功能概览
+
+| 功能 | 说明 |
+|------|------|
+| 文档脱敏 | 精确规则可逆脱敏 + 正则规则不可逆脱敏 |
+| 文档恢复 | 基于精确规则的可逆恢复 |
+| 密码本库 | 多密码本集中管理，版本快照，导入/导出 |
+| 历史记录 | 自动记录任务历史，支持筛选查看 |
+| 格式支持 | TXT / DOCX / DOC（需 LibreOffice 或 Word） |
+
+---
+
 ## 下载预编译版本
 
 ### Windows
@@ -225,6 +237,22 @@ docmask/
 │   ├── txt_handler.py       # TXT
 │   ├── docx_handler.py      # DOCX（段落/表格/页眉/文本框/脚注/超链接/元数据）
 │   └── doc_handler.py       # DOC（pywin32/LibreOffice 转换）
+├── services/               # 服务层
+│   ├── codebook_library.py # 密码本库管理（多密码本、版本快照）
+│   ├── history_store.py    # 历史记录存储（JSONL）
+│   └── file_service.py     # 文件批量处理
+├── ui/                     # GUI 界面
+│   ├── app.py              # 主窗口与页面路由
+│   ├── controller.py       # UI 控制器（任务调度、密码本库操作）
+│   ├── state.py            # 应用状态模型
+│   ├── theme.py            # 主题配置
+│   ├── pages/              # 页面
+│   │   ├── workbench_page.py    # 工作台
+│   │   ├── codebook_page.py     # 密码本库（库/编辑器/版本三 Tab）
+│   │   ├── history_page.py      # 历史记录
+│   │   ├── results_page.py      # 任务结果
+│   │   └── settings_page.py     # 设置
+│   └── widgets/            # 可复用控件
 ├── utils/                   # 工具
 │   ├── encoding.py          # 编码检测
 │   ├── file_utils.py        # 文件路径处理

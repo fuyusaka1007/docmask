@@ -12,11 +12,13 @@ import time
 from pathlib import Path
 from typing import Callable, Optional
 
-from docmask.core.codebook import Codebook, CodebookError
+from docmask.core.codebook import Codebook, CodebookError, CodebookRule
 from docmask.core.masker import Masker, MaskConflictError
 from docmask.core.restorer import Restorer
 from docmask.handlers.base import CancelToken, TaskCancelledError
 from docmask.services.file_service import scan_files, get_handler
+from docmask.services.codebook_library import CodebookLibrary, CodebookMeta, VersionInfo
+from docmask.services.history_store import HistoryStore, HistoryEntry
 from docmask.utils.file_utils import generate_output_path
 from docmask.config import DESENSITIZED_SUFFIX, RESTORED_SUFFIX
 
@@ -45,8 +47,91 @@ class TaskController:
         self._closed = False
         self._scan_thread: Optional[threading.Thread] = None
         self._scan_cancel = threading.Event()
+        self._library: Optional[CodebookLibrary] = None
+        self._history: Optional[HistoryStore] = None
 
-    # ======================== 密码本 ========================
+    # ======================== 密码本库 ========================
+
+    def init_library(self) -> CodebookLibrary:
+        """初始化密码本库（懒加载）。"""
+        if self._library is None:
+            self._library = CodebookLibrary()
+        return self._library
+
+    def list_codebooks(self) -> list[CodebookMeta]:
+        return self.init_library().list_codebooks()
+
+    def create_codebook(self, name: str, description: str = "") -> CodebookMeta:
+        return self.init_library().create(name, description)
+
+    def load_library_codebook(self, codebook_id: str) -> CodebookState:
+        """从库加载密码本到当前状态。"""
+        lib = self.init_library()
+        cb = lib.load(codebook_id)
+        meta = None
+        for m in lib.list_codebooks():
+            if m.id == codebook_id:
+                meta = m
+                break
+        messages = cb.validate()
+        error_count = sum(1 for m in messages if m.startswith("ERROR"))
+        warning_count = sum(1 for m in messages if m.startswith("WARNING"))
+        cb_state = CodebookState(
+            path=str(lib._current_path(codebook_id)),
+            codebook=cb,
+            valid=error_count == 0,
+            error_count=error_count,
+            warning_count=warning_count,
+            messages=messages,
+            library_id=codebook_id,
+            library_name=meta.name if meta else "",
+            version=meta.current_version if meta else "",
+            from_library=True,
+            edit_rules=cb.to_rules() if cb.exact_rule_count or cb.regex_rule_count else [],
+        )
+        self.state.codebook = cb_state
+        return cb_state
+
+    def save_codebook_to_library(
+        self, codebook_id: str, rules: list[CodebookRule]
+    ) -> tuple[VersionInfo, list[str]]:
+        """保存密码本到库（生成新版本快照）。"""
+        lib = self.init_library()
+        cb = Codebook.__new__(Codebook)
+        cb.filepath = ""
+        cb.forward_map = {}
+        cb.reverse_map = {}
+        cb._sorted_keys = []
+        cb.regex_rules = []
+        cb._line_numbers = {}
+        cb._regex_line_numbers = []
+        cb._raw_content = ""
+        messages = cb.update_rules(rules)
+        version = lib.save(codebook_id, cb)
+        return version, messages
+
+    def rename_codebook(self, codebook_id: str, new_name: str) -> None:
+        self.init_library().rename(codebook_id, new_name)
+
+    def delete_codebook(self, codebook_id: str) -> None:
+        self.init_library().delete(codebook_id)
+
+    def duplicate_codebook(self, codebook_id: str, new_name: str) -> CodebookMeta:
+        return self.init_library().duplicate(codebook_id, new_name)
+
+    def import_codebook(self, src_path: str, name: str) -> CodebookMeta:
+        return self.init_library().import_file(src_path, name)
+
+    def export_codebook(self, codebook_id: str, dest_path: str) -> None:
+        self.init_library().export_file(codebook_id, dest_path)
+
+    def list_versions(self, codebook_id: str) -> list[VersionInfo]:
+        return self.init_library().list_versions(codebook_id)
+
+    def restore_version(self, codebook_id: str, version_id: str) -> VersionInfo:
+        return self.init_library().restore_version(codebook_id, version_id)
+
+    # ======================== 密码本（文件加载） ========================
 
     def load_codebook(self, path: str) -> CodebookState:
         """加载并校验密码本（同步，通常很快）"""
@@ -294,6 +379,9 @@ class TaskController:
             aggregate_total = total * 100
             self._safe_after(on_progress, aggregate_total, aggregate_total, "任务完成")
             self._safe_after(on_complete, results)
+            # 延迟记录历史：让 Tk 先完成 on_complete 触发的页面切换与重绘，
+            # 再执行 record_history 的同步磁盘 I/O，避免白屏。
+            self._safe_after(self._schedule_record_history, results)
 
     def _safe_after(self, callback, *args) -> None:
         """工作线程安全投递事件；本方法绝不调用 Tk。"""
@@ -350,3 +438,72 @@ class TaskController:
         for thread in (self._thread, self._scan_thread):
             if thread and thread.is_alive():
                 thread.join(max(0.0, deadline - time.monotonic()))
+
+    # ======================== 工作历史 ========================
+
+    def _schedule_record_history(self, results: list[FileItem]) -> None:
+        """通过 Tk after() 延迟执行 record_history，让事件循环先处理重绘。"""
+        if self._closed:
+            return
+        if self.tk_root:
+            self.tk_root.after(50, lambda: self.record_history(results))
+        else:
+            self.record_history(results)
+
+    def record_history(self, results: list[FileItem]) -> None:
+        """任务完成后记录历史（主线程执行）。
+
+        根据 state.history_enabled 决定是否记录。
+        """
+        if not self.state.history_enabled:
+            return
+        if self._history is None:
+            self._history = HistoryStore()
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        mode = "mask" if self.state.mode == Mode.MASK else "restore"
+        cb_state = self.state.codebook
+        cb_name = cb_state.library_name or (
+            os.path.basename(cb_state.path) if cb_state.path else ""
+        )
+        cb_version = cb_state.version or ""
+        exact_count = cb_state.exact_count
+        regex_count = cb_state.regex_count
+        for item in results:
+            status_map = {
+                FileStatus.DONE: "done",
+                FileStatus.CONFLICT: "conflict",
+                FileStatus.FAILED: "failed",
+                FileStatus.STOPPED: "stopped",
+            }
+            status = status_map.get(item.status, "failed")
+            entry = HistoryEntry(
+                timestamp=timestamp,
+                mode=mode,
+                input_path=item.path,
+                input_filename=item.filename,
+                output_path=item.output_path or "",
+                codebook_name=cb_name,
+                codebook_version=cb_version,
+                exact_rule_count=exact_count,
+                regex_rule_count=regex_count,
+                replacements=item.replacements,
+                status=status,
+                error=item.error_message,
+            )
+            try:
+                self._history.append(entry)
+            except Exception:
+                logger.warning("写入历史记录失败", exc_info=True)
+
+    def query_history(self, limit: int = 100) -> list[HistoryEntry]:
+        """查询历史记录。"""
+        if self._history is None:
+            self._history = HistoryStore()
+        return self._history.query(limit=limit)
+
+    def clear_history(self) -> None:
+        """清空历史记录。"""
+        if self._history is None:
+            self._history = HistoryStore()
+        self._history.clear()
