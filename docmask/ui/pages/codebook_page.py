@@ -546,16 +546,22 @@ class CodebookPage(ctk.CTkFrame):
         return (orig_entry, repl_entry, comment_entry, rule.rule_type)
 
     def _collect_rules(self) -> list[CodebookRule]:
-        """从输入框收集规则列表（跳过空行，用于保存/校验）。"""
+        """从输入框收集规则列表，用于保存/校验。
+
+        A-07: 不再跳过未填完整的行。只有完全空行（原文、脱敏词、注释
+        均为空）才跳过。未填完整的行会触发 update_rules 的 ERROR，
+        阻止保存，防止规则被静默丢弃。
+        """
         rules = []
         for orig_entry, repl_entry, comment_entry, rule_type in self._rule_rows:
             original = orig_entry.get().strip()
             replacement = repl_entry.get().strip()
             comment = comment_entry.get().strip()
-            if not original or not replacement:
+            # 完全空行才跳过
+            if not original and not replacement and not comment:
                 continue
-            if rule_type == "regex":
-                original = f"{REGEX_PREFIX}{original}" if not original.startswith(REGEX_PREFIX) else original
+            if rule_type == "regex" and original and not original.startswith(REGEX_PREFIX):
+                original = f"{REGEX_PREFIX}{original}"
             rules.append(CodebookRule(
                 rule_type=rule_type,
                 original=original,
@@ -965,6 +971,14 @@ class CodebookPage(ctk.CTkFrame):
         try:
             version, messages = self.controller.save_codebook_to_library(cb.library_id, rules)
             self._validation_messages = messages
+            # A-02: 存在 ERROR 时不保存，显示错误信息
+            if version is None:
+                errors = [m for m in messages if m.startswith("ERROR")]
+                self._render_editor()
+                messagebox.showerror("保存失败",
+                    "密码本存在错误，无法保存：\n" + "\n".join(errors),
+                    parent=self)
+                return
             # 重新加载并同步编辑器规则
             cb_state = self.controller.load_library_codebook(cb.library_id)
             self._edit_rules = cb_state.edit_rules
@@ -982,7 +996,14 @@ class CodebookPage(ctk.CTkFrame):
             return
         try:
             meta = self.controller.create_codebook(name)
-            self.controller.save_codebook_to_library(meta.id, rules)
+            version, messages = self.controller.save_codebook_to_library(meta.id, rules)
+            # A-02: 存在 ERROR 时不保存
+            if version is None:
+                errors = [m for m in messages if m.startswith("ERROR")]
+                messagebox.showerror("保存失败",
+                    "密码本存在错误，无法保存：\n" + "\n".join(errors),
+                    parent=self)
+                return
             self.controller.load_library_codebook(meta.id)
             self._show_tab(0)
         except Exception as e:

@@ -2,7 +2,7 @@
 import os
 import pytest
 from docmask.core.codebook import Codebook
-from docmask.core.masker import Masker, RegexBudgetExceededError, _MAX_REGEX_INPUT_LENGTH
+from docmask.core.masker import Masker, RegexBudgetExceededError, TextTooLongError, _MAX_REGEX_INPUT_LENGTH
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "test_data")
 
@@ -147,15 +147,49 @@ class TestReDoSProtection:
         assert count == 1
         assert "[手机号已脱敏]" in result
 
-    def test_regex_input_length_limit(self, tmp_path):
-        """超长文本正则仅匹配前 _MAX_REGEX_INPUT_LENGTH 字符。"""
+    def test_regex_input_length_limit_fail_closed(self, tmp_path):
+        """A-01: 超长文本含正则规则时应 fail closed，抛出 TextTooLongError。"""
         cb = self._make_codebook(tmp_path, "regex:END$==>X\n")
         masker = Masker(cb)
-        # END 在截断范围外，不应被匹配
         text = "a" * (_MAX_REGEX_INPUT_LENGTH + 100) + "END"
+        with pytest.raises(TextTooLongError) as exc_info:
+            masker.mask_text(text)
+        assert exc_info.value.text_length == len(text)
+        assert exc_info.value.limit == _MAX_REGEX_INPUT_LENGTH
+
+    def test_regex_at_length_boundary_ok(self, tmp_path):
+        """A-01: 文本恰好等于上限时仍可正常处理（边界值）。"""
+        cb = self._make_codebook(tmp_path, "regex:END$==>X\n")
+        masker = Masker(cb)
+        text = "a" * (_MAX_REGEX_INPUT_LENGTH - 3) + "END"
         result, count, _ = masker.mask_text(text)
-        assert count == 0
-        assert "X" not in result
+        assert count == 1
+        assert "X" in result
+
+    def test_exact_rules_unaffected_by_length_limit(self, tmp_path):
+        """A-01: 纯精确规则不受长度限制影响，超长文本仍可匹配。"""
+        cb = self._make_codebook(tmp_path, "SECRET==>MASKED\n")
+        masker = Masker(cb)
+        text = "a" * (_MAX_REGEX_INPUT_LENGTH + 100) + "SECRET"
+        result, count, _ = masker.mask_text(text)
+        assert count == 1
+        assert "MASKED" in result
+        assert "SECRET" not in result
+
+    def test_text_too_long_via_txt_handler_no_output(self, tmp_path):
+        """A-01: 超长 TXT 通过 TxtHandler 处理时应失败，不产生输出文件。"""
+        from docmask.handlers.txt_handler import TxtHandler
+
+        source = tmp_path / "long.txt"
+        text = "a" * (_MAX_REGEX_INPUT_LENGTH + 100) + "END"
+        source.write_text(text, encoding="utf-8")
+        cb = self._make_codebook(tmp_path, "regex:END$==>X\n")
+        masker = Masker(cb)
+
+        handler = TxtHandler()
+        with pytest.raises(TextTooLongError):
+            handler.mask(str(source), masker)
+        assert not list(tmp_path.glob("*_desensitized*"))
 
     def test_redos_via_txt_handler_fails_gracefully(self, tmp_path):
         """ReDoS 通过 TxtHandler 处理时应作为文件失败，不阻塞批处理。"""

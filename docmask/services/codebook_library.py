@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import re
 import shutil
 import tempfile
 import uuid
@@ -16,6 +18,8 @@ from typing import Optional
 
 from docmask.core.codebook import Codebook, CodebookError
 from docmask.utils.file_utils import user_data_dir, staged_output_path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -55,6 +59,10 @@ class CodebookLibrary:
 
     MAX_VERSIONS = 20
 
+    # A-19: ID 格式校验，防止路径遍历
+    _CODEBOOK_ID_RE = re.compile(r"^cb-[0-9a-f]{8}$")
+    _VERSION_ID_RE = re.compile(r"^v-\d{8}_\d{6}_[0-9a-f]{6}$")
+
     def __init__(self, base_dir: Optional[Path] = None):
         self._base_dir = base_dir or (user_data_dir() / "codebooks")
         self._base_dir.mkdir(parents=True, exist_ok=True)
@@ -63,15 +71,119 @@ class CodebookLibrary:
 
     # ======================== 索引读写 ========================
 
+    @classmethod
+    def _validate_codebook_id(cls, codebook_id: str) -> None:
+        """A-19: 校验密码本 ID 格式，防止路径遍历攻击。"""
+        if not isinstance(codebook_id, str) or not cls._CODEBOOK_ID_RE.match(codebook_id):
+            raise CodebookError(f"无效的密码本 ID：{codebook_id}")
+
+    @classmethod
+    def _validate_version_id(cls, version_id: str) -> None:
+        """A-19: 校验版本 ID 格式，防止路径遍历攻击。"""
+        if not isinstance(version_id, str) or not cls._VERSION_ID_RE.match(version_id):
+            raise CodebookError(f"无效的版本 ID：{version_id}")
+
     def _ensure_index(self) -> None:
         if not self._index_path.exists():
-            self._write_index({"codebooks": []})
+            # A-19: 索引不存在时从子目录重建，而非直接创建空索引
+            self._rebuild_index()
+        # A-08: 检测并恢复中断的保存操作
+        self._recover_interrupted_saves()
+
+    def _recover_interrupted_saves(self) -> None:
+        """A-08: 检测并恢复中断的保存操作。
+
+        如果发现 commit marker，说明上次保存被中断。
+        使用 commit marker 中的 meta 数据恢复一致性。
+        """
+        if not self._base_dir.exists():
+            return
+        for cb_dir in self._base_dir.iterdir():
+            if not cb_dir.is_dir() or cb_dir.name.startswith("."):
+                continue
+            # A-19: 跳过不符合 ID 格式的目录
+            if not self._CODEBOOK_ID_RE.match(cb_dir.name):
+                continue
+            commit_marker = cb_dir / ".commit"
+            if not commit_marker.exists():
+                continue
+            codebook_id = cb_dir.name
+            try:
+                new_meta = json.loads(
+                    commit_marker.read_text(encoding="utf-8")
+                )
+                version_id = new_meta.get("current_version", "")
+                version_path = cb_dir / "versions" / f"{version_id}.txt"
+                if version_path.exists():
+                    # 版本文件已写入 -> 确保其余文件一致
+                    current_path = cb_dir / "current.txt"
+                    if not current_path.exists() or \
+                            current_path.read_text(encoding="utf-8") != \
+                            version_path.read_text(encoding="utf-8"):
+                        shutil.copy2(version_path, current_path)
+                    self._write_meta(codebook_id, new_meta)
+                    versions = new_meta.get("versions", [])
+                    last_v = versions[-1] if versions else {}
+                    meta_obj = CodebookMeta(
+                        id=codebook_id,
+                        name=new_meta.get("name", ""),
+                        description=new_meta.get("description", ""),
+                        created_at=new_meta.get("created_at", ""),
+                        updated_at=new_meta.get("updated_at", ""),
+                        current_version=version_id,
+                        version_count=len(versions),
+                        exact_rule_count=last_v.get("exact_rule_count", 0),
+                        regex_rule_count=last_v.get("regex_rule_count", 0),
+                    )
+                    self._update_index_entry(meta_obj)
+                # 版本文件不存在 -> 保存中断极早，旧状态完好，无需操作
+                commit_marker.unlink()
+            except (json.JSONDecodeError, OSError):
+                try:
+                    commit_marker.unlink()
+                except FileNotFoundError:
+                    pass
 
     def _read_index(self) -> dict:
+        """A-19: 读取索引并校验结构；损坏时从子目录重建。"""
         try:
-            return json.loads(self._index_path.read_text(encoding="utf-8"))
+            data = json.loads(self._index_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, FileNotFoundError):
-            return {"codebooks": []}
+            logger.warning("索引文件损坏或不存在，尝试从子目录重建")
+            return self._rebuild_index()
+        if not isinstance(data, dict) or not isinstance(data.get("codebooks"), list):
+            logger.warning("索引结构无效，尝试从子目录重建")
+            return self._rebuild_index()
+        return data
+
+    def _rebuild_index(self) -> dict:
+        """A-19: 从子目录重建索引。不静默返回空库。"""
+        codebooks: list[dict] = []
+        if self._base_dir.exists():
+            for cb_dir in sorted(self._base_dir.iterdir()):
+                if not cb_dir.is_dir() or cb_dir.name.startswith("."):
+                    continue
+                cb_id = cb_dir.name
+                if not self._CODEBOOK_ID_RE.match(cb_id):
+                    continue
+                meta = self._read_meta(cb_id)
+                if not meta:
+                    continue
+                meta_obj = self._meta_to_obj(cb_id, meta)
+                codebooks.append({
+                    "id": meta_obj.id,
+                    "name": meta_obj.name,
+                    "description": meta_obj.description,
+                    "created_at": meta_obj.created_at,
+                    "updated_at": meta_obj.updated_at,
+                    "current_version": meta_obj.current_version,
+                    "version_count": meta_obj.version_count,
+                    "exact_rule_count": meta_obj.exact_rule_count,
+                    "regex_rule_count": meta_obj.regex_rule_count,
+                })
+        data = {"codebooks": codebooks}
+        self._write_index(data)
+        return data
 
     def _write_index(self, data: dict) -> None:
         tmp_fd, tmp_name = tempfile.mkstemp(
@@ -127,7 +239,14 @@ class CodebookLibrary:
         return f"v-{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
 
     def _codebook_dir(self, codebook_id: str) -> Path:
-        return self._base_dir / codebook_id
+        # A-19: ID 校验 + 路径安全检查
+        self._validate_codebook_id(codebook_id)
+        path = self._base_dir / codebook_id
+        resolved = path.resolve()
+        base_resolved = self._base_dir.resolve()
+        if resolved != base_resolved and base_resolved not in resolved.parents:
+            raise CodebookError(f"路径越界：{codebook_id}")
+        return path
 
     def _current_path(self, codebook_id: str) -> Path:
         return self._codebook_dir(codebook_id) / "current.txt"
@@ -276,7 +395,13 @@ class CodebookLibrary:
         return cb
 
     def save(self, codebook_id: str, codebook: Codebook) -> VersionInfo:
-        """保存密码本并自动生成版本快照。"""
+        """保存密码本并自动生成版本快照。
+
+        A-08: 使用 commit marker 实现事务性保存。
+        版本快照先写入，然后写入 commit marker 记录目标 meta 状态，
+        最后依次更新 current.txt / meta.json / index.json。
+        中断后启动时通过 commit marker 恢复一致性。
+        """
         now = self._now()
         version_id = self._version_id()
 
@@ -288,15 +413,8 @@ class CodebookLibrary:
         new_exact, new_regex = self._count_rules(codebook)
         summary = self._make_change_summary(old_exact, old_regex, new_exact, new_regex)
 
-        # 写入 current.txt
         content = codebook.render()
-        self._write_current(codebook_id, content)
 
-        # 复制到版本快照
-        version_path = self._versions_dir(codebook_id) / f"{version_id}.txt"
-        shutil.copy2(self._current_path(codebook_id), version_path)
-
-        # 更新 meta
         version_info = {
             "version_id": version_id,
             "created_at": now,
@@ -304,38 +422,69 @@ class CodebookLibrary:
             "regex_rule_count": new_regex,
             "change_summary": summary,
         }
-        old_versions.append(version_info)
+        new_versions = list(old_versions)
+        new_versions.append(version_info)
 
         # 清理超出 MAX_VERSIONS 的旧版本
-        if len(old_versions) > self.MAX_VERSIONS:
-            removed = old_versions[: len(old_versions) - self.MAX_VERSIONS]
-            old_versions = old_versions[len(old_versions) - self.MAX_VERSIONS:]
-            for v in removed:
-                v_path = self._versions_dir(codebook_id) / f"{v['version_id']}.txt"
+        removed_versions: list[dict] = []
+        if len(new_versions) > self.MAX_VERSIONS:
+            removed_versions = new_versions[: len(new_versions) - self.MAX_VERSIONS]
+            new_versions = new_versions[len(new_versions) - self.MAX_VERSIONS:]
+
+        new_meta = dict(old_meta)
+        new_meta["updated_at"] = now
+        new_meta["current_version"] = version_id
+        new_meta["versions"] = new_versions
+
+        cb_dir = self._codebook_dir(codebook_id)
+        versions_dir = self._versions_dir(codebook_id)
+
+        # A-08: 先写版本快照（作为备份），再写 commit marker
+        version_path = versions_dir / f"{version_id}.txt"
+        version_path.write_text(content, encoding="utf-8")
+
+        commit_marker = cb_dir / ".commit"
+        commit_marker.write_text(
+            json.dumps(new_meta, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        try:
+            # 依次更新各文件（每个文件本身通过 temp+os.replace 原子写入）
+            self._write_current(codebook_id, content)
+
+            # 删除超出上限的旧版本
+            for v in removed_versions:
+                v_path = versions_dir / f"{v['version_id']}.txt"
                 try:
                     v_path.unlink()
                 except FileNotFoundError:
                     pass
 
-        meta = old_meta
-        meta["updated_at"] = now
-        meta["current_version"] = version_id
-        meta["versions"] = old_versions
-        self._write_meta(codebook_id, meta)
+            self._write_meta(codebook_id, new_meta)
 
-        # 更新索引
-        meta_obj = CodebookMeta(
-            id=codebook_id,
-            name=meta.get("name", ""),
-            description=meta.get("description", ""),
-            created_at=meta.get("created_at", ""),
-            updated_at=now,
-            current_version=version_id,
-            version_count=len(old_versions),
-            exact_rule_count=new_exact,
-            regex_rule_count=new_regex,
-        )
-        self._update_index_entry(meta_obj)
+            # 更新索引
+            meta_obj = CodebookMeta(
+                id=codebook_id,
+                name=new_meta.get("name", ""),
+                description=new_meta.get("description", ""),
+                created_at=new_meta.get("created_at", ""),
+                updated_at=now,
+                current_version=version_id,
+                version_count=len(new_versions),
+                exact_rule_count=new_exact,
+                regex_rule_count=new_regex,
+            )
+            self._update_index_entry(meta_obj)
+
+            # 事务完成 — 删除 commit marker
+            commit_marker.unlink()
+        except Exception:
+            try:
+                commit_marker.unlink()
+            except FileNotFoundError:
+                pass
+            raise
 
         return VersionInfo(
             version_id=version_id,
@@ -420,6 +569,8 @@ class CodebookLibrary:
 
     def load_version(self, codebook_id: str, version_id: str) -> Codebook:
         """加载指定历史版本，返回 Codebook 实例。"""
+        # A-19: 版本 ID 校验
+        self._validate_version_id(version_id)
         version_path = self._versions_dir(codebook_id) / f"{version_id}.txt"
         if not version_path.exists():
             raise CodebookError(f"版本不存在：{version_id}")

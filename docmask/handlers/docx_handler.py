@@ -393,39 +393,57 @@ class DocxHandler:
 
         with staged_output_path(output_path) as temp_path:
             doc.save(temp_path)
+            # A-17: 恢复后残留校验，与脱敏阶段对称
+            self._assert_no_masked_word_residuals(temp_path, restorer)
         logger.info(f"恢复完成: {input_path} -> {output_path}, 替换 {count} 处")
         return output_path, count
 
     # ======================== 文本收集（冲突预检用） ========================
 
+    @classmethod
+    def _collect_grouped_texts(cls, root) -> list[str]:
+        """A-05: 使用与 _mask_direct_runs 相同的文本分组逻辑收集文本。
+
+        确保冲突预检看到的文本与实际脱敏处理的文本坐标一致，
+        避免跨 Run 拆分的脱敏词（如 MAS + KED）在预检中漏检。
+        """
+        texts: list[str] = []
+        for para in root.findall(".//w:p", NSMAP):
+            for text_nodes in cls._iter_direct_text_groups(para):
+                text = "".join(node.text or "" for node in text_nodes)
+                if text:
+                    texts.append(text)
+            for hyperlink in para.findall("w:hyperlink", NSMAP):
+                for text_nodes in cls._iter_direct_text_groups(hyperlink):
+                    text = "".join(node.text or "" for node in text_nodes)
+                    if text:
+                        texts.append(text)
+        return texts
+
     def _collect_all_text(self, doc: Document) -> str:
-        """收集文档中所有文本内容，用于冲突预检"""
+        """收集文档中所有文本内容，用于冲突预检
+
+        A-05: 使用与脱敏阶段相同的文本分组逻辑，确保跨 Run 拆分的
+        脱敏词在预检中也能被检测到。
+        """
         parts: list[str] = []
 
-        # 正文、表格、文本框、超链接等 body 内所有 w:t。
-        for tag in ("w:t", "w:delText"):
-            parts.extend(
-                node.text for node in doc.element.body.findall(f".//{tag}", NSMAP)
-                if node.text
-            )
+        # 正文（含表格、文本框、SDT 等 body 内所有段落）
+        parts.extend(self._collect_grouped_texts(doc.element.body))
 
-        # 页眉页脚（含其中的表格、文本框与超链接）。
+        # 页眉页脚（含其中的表格、文本框与超链接）
         for root in self._header_footer_roots(doc):
-            for tag in ("w:t", "w:delText"):
-                parts.extend(
-                    node.text for node in root.findall(f".//{tag}", NSMAP)
-                    if node.text
-                )
+            parts.extend(self._collect_grouped_texts(root))
 
-        # 脚注和尾注。
+        # 脚注和尾注
         for _label, note_part in self._note_parts(doc):
-            root = etree.fromstring(note_part.blob)
-            for tag in ("w:t", "w:delText"):
-                parts.extend(
-                    node.text for node in root.findall(f".//{tag}", NSMAP)
-                    if node.text
-                )
+            try:
+                root = etree.fromstring(note_part.blob)
+            except (etree.XMLSyntaxError, ValueError):
+                continue
+            parts.extend(self._collect_grouped_texts(root))
 
+        # 批注、扩展属性和自定义属性
         for part in doc.part.package.parts:
             partname = str(part.partname).lstrip("/")
             is_comments = partname.startswith("word/comments") and partname.endswith(".xml")
@@ -433,11 +451,7 @@ class DocxHandler:
                 try:
                     root = etree.fromstring(part.blob)
                     if is_comments:
-                        for tag in ("w:t", "w:delText"):
-                            parts.extend(
-                                node.text for node in root.findall(f".//{tag}", NSMAP)
-                                if node.text
-                            )
+                        parts.extend(self._collect_grouped_texts(root))
                         for comment in root.findall(".//w:comment", NSMAP):
                             for attribute in (qn("w:author"), qn("w:initials")):
                                 value = comment.get(attribute)
@@ -1012,14 +1026,8 @@ class DocxHandler:
     def _contains_rule_source(text: str, masker: Masker) -> bool:
         if any(key in text for key in masker.codebook.get_sorted_keys()):
             return True
-        for pattern, _ in masker.regex_rules:
-            try:
-                if pattern.search(text) is not None:
-                    return True
-            except Exception:
-                # A-02: 正则超时等异常按"可能含敏感内容"处理（fail safe）
-                return True
-        return False
+        # A-04: 正则搜索统一走 codebook.safe_search，受编译时 timeout 保护。
+        return masker.codebook.safe_search(text)
 
     @staticmethod
     def _snapshot_all_texts(doc: Document) -> set[str]:
@@ -1126,9 +1134,10 @@ class DocxHandler:
         for i in range(n):
             for w in range(2, min(self._CROSS_NODE_WINDOW_MAX + 1, n - i + 1)):
                 combined = "".join(text_values[i:i + w])
-                # 优先匹配快照中的完整原文（低误报）；其次直接检查规则原文
-                if (combined in original_texts or w == 2) and \
-                        self._contains_rule_source(combined, masker):
+                # A-13: 直接对相邻节点窗口执行规则检测，不再要求 combined
+                # 存在于 original_texts（该集合只含逐节点文本，导致 3/4 节点
+                # 窗口实际失效）。窗口有界以限制跨不相关结构的误报。
+                if self._contains_rule_source(combined, masker):
                     warnings.append(
                         f"不支持的 OPC 文本部件可能含跨节点敏感内容：{partname}"
                     )
@@ -1138,13 +1147,20 @@ class DocxHandler:
     def _assert_no_supported_residuals(
         self, filepath: str, masker: Masker, original_texts: set[str]
     ) -> None:
-        """保存后重新读取 ZIP；支持范围内仍有"未被替换的原文"则拒绝提交。
+        """保存后重新读取 ZIP；支持范围内仍有待脱敏内容则拒绝提交。
 
-        通过比较脱敏前快照区分"未被替换的原文"和"脱敏词中的字符"：
-        只有文本值在脱敏前快照中存在（说明该节点未被替换），且包含规则原文，
-        才算残留。脱敏后的新文本（不在快照中）即使包含规则原文字符也不报错，
-        因为那些字符来自脱敏词本身（如 {数字占位符1} 中的 '1'）。
+        A-06: 不再仅检查"在脱敏前快照中存在的文本"，而是检查所有文本值。
+        通过排除脱敏词本身来避免误报：如果文本值恰好是某个脱敏词，说明
+        该节点已被完全替换，不算残留。部分替换的节点（既不在快照中、
+        也不等于任何脱敏词）如果仍包含规则原文，则判定为残留。
         """
+        # 收集所有脱敏词，用于排除完全替换的节点
+        replacement_words: set[str] = set()
+        replacement_words.update(masker.codebook.forward_map.values())
+        for _, replacement in masker.codebook.regex_rules:
+            if replacement:
+                replacement_words.add(replacement)
+
         with zipfile.ZipFile(filepath) as archive:
             for partname in archive.namelist():
                 if not self._is_supported_part(partname) or not partname.endswith(".xml"):
@@ -1182,12 +1198,64 @@ class DocxHandler:
                 # 必须与写入阶段覆盖完全一致
                 if partname not in {"docProps/app.xml", "docProps/custom.xml", "docProps/core.xml"}:
                     values.extend(self._iter_extended_attr_values(root))
-                # 只检查"未被替换的原文"：文本值在脱敏前快照中存在，
-                # 说明该节点没被脱敏处理（或处理失败），且包含规则原文 → 残留。
+                # A-06: 检查所有文本值，排除完全替换的节点（值恰为脱敏词）。
+                # 部分替换的节点（值不同于任何脱敏词）仍包含规则原文 -> 残留。
                 for value in values:
-                    if value in original_texts and self._contains_rule_source(value, masker):
+                    if value in replacement_words:
+                        continue
+                    if self._contains_rule_source(value, masker):
                         raise RuntimeError(
                             f"保存后残留校验失败，支持部件仍存在待脱敏内容：{partname}"
+                        )
+
+    def _assert_no_masked_word_residuals(self, filepath: str, restorer: Restorer) -> None:
+        """A-17: 恢复后残留校验，与脱敏阶段对称。
+
+        检查保存后的文件中是否仍有精确规则脱敏词残留。
+        正则替换词不可逆，不检查。
+        """
+        masked_words = set(restorer.codebook.forward_map.values())
+        if not masked_words:
+            return
+
+        with zipfile.ZipFile(filepath) as archive:
+            for partname in archive.namelist():
+                if not self._is_supported_part(partname) or not partname.endswith(".xml"):
+                    continue
+                try:
+                    root = etree.fromstring(archive.read(partname))
+                except etree.XMLSyntaxError:
+                    continue
+
+                if partname == "docProps/app.xml" or partname == "docProps/custom.xml":
+                    nodes = self._auxiliary_part_nodes(root, partname)
+                elif partname == "docProps/core.xml":
+                    nodes = [
+                        node for node in root.iter()
+                        if etree.QName(node).localname in self.CORE_TEXT_FIELDS
+                    ]
+                else:
+                    text_localnames = {"t", "delText"} | _EXTENDED_TEXT_LOCALNAMES
+                    nodes = [
+                        node for node in root.iter()
+                        if etree.QName(node).localname in text_localnames
+                    ]
+                values = [node.text for node in nodes if node.text]
+                if partname.startswith("word/comments"):
+                    for comment in root.findall(".//w:comment", NSMAP):
+                        values.extend(
+                            v for v in (
+                                comment.get(qn("w:author")),
+                                comment.get(qn("w:initials")),
+                            ) if v
+                        )
+                if partname not in {"docProps/app.xml", "docProps/custom.xml", "docProps/core.xml"}:
+                    values.extend(self._iter_extended_attr_values(root))
+
+                for value in values:
+                    if any(word in value for word in masked_words):
+                        raise RuntimeError(
+                            f"恢复后残留校验失败，支持部件仍存在脱敏词：{partname}"
                         )
 
     # ======================== 恢复方法 ========================

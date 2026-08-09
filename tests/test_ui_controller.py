@@ -2,7 +2,7 @@
 import threading
 from pathlib import Path
 
-from docmask.core.codebook import Codebook
+from docmask.core.codebook import Codebook, CodebookRule
 from docmask.ui.controller import TaskController
 from docmask.ui.state import AppState, FileStatus, Mode, create_file_item
 
@@ -161,3 +161,33 @@ def test_top_level_worker_failure_completes_once_and_resets_state(tmp_path, monk
     assert state.task_running is False
     assert state.files[0].status == FileStatus.FAILED
     assert len(completed) == 1
+
+
+def test_save_codebook_with_error_does_not_save(tmp_path):
+    """A-02: 含 ERROR 的密码本禁止保存，当前版本不变。"""
+    state = _make_state(tmp_path)
+    controller = TaskController(state, ImmediateTkRoot())
+
+    # 创建密码本并保存有效规则
+    meta = controller.create_codebook("测试密码本")
+    valid_rules = [
+        CodebookRule(rule_type="exact", original="张三", replacement="李四"),
+    ]
+    version, messages = controller.save_codebook_to_library(meta.id, valid_rules)
+    assert version is not None
+    assert not any(m.startswith("ERROR") for m in messages)
+
+    # 尝试保存无效规则（脱敏词重复）
+    invalid_rules = [
+        CodebookRule(rule_type="exact", original="A", replacement="X"),
+        CodebookRule(rule_type="exact", original="B", replacement="X"),
+    ]
+    version2, messages2 = controller.save_codebook_to_library(meta.id, invalid_rules)
+    # A-02: 存在 ERROR 时返回 (None, messages)，不保存
+    assert version2 is None
+    assert any(m.startswith("ERROR") for m in messages2)
+
+    # 当前版本仍为有效规则
+    loaded = controller.init_library().load(meta.id)
+    assert loaded.exact_rule_count == 1
+    assert "张三" in loaded.forward_map

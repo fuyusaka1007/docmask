@@ -1,5 +1,7 @@
 """密码本解析模块测试"""
 import os
+from unittest.mock import patch
+
 import pytest
 from docmask.core.codebook import Codebook, CodebookError
 
@@ -114,3 +116,26 @@ class TestCodebookValidate:
                 cb.load()
         finally:
             os.remove(tmp_path)
+
+
+class TestRegexModuleRequired:
+    """A-03: 无 regex 模块时正则规则应拒绝加载（fail closed）。"""
+
+    def test_regex_rule_rejected_without_regex_module(self, tmp_path):
+        """无 regex 模块时，含正则规则的密码本应拒绝加载。"""
+        cb_path = tmp_path / "cb_regex.txt"
+        cb_path.write_text("regex:\\d{11}==>[手机号]\n", encoding="utf-8")
+        cb = Codebook(str(cb_path))
+        with patch("docmask.core.codebook._HAS_REGEX_MODULE", False):
+            with pytest.raises(CodebookError, match="未安装 regex 模块"):
+                cb.load()
+
+    def test_exact_rules_work_without_regex_module(self, tmp_path):
+        """无 regex 模块时，纯精确规则密码本仍可正常加载。"""
+        cb_path = tmp_path / "cb_exact.txt"
+        cb_path.write_text("张三==>李四\n秘密==>已脱敏\n", encoding="utf-8")
+        cb = Codebook(str(cb_path))
+        with patch("docmask.core.codebook._HAS_REGEX_MODULE", False):
+            cb.load()
+        assert cb.exact_rule_count == 2
+        assert cb.regex_rule_count == 0

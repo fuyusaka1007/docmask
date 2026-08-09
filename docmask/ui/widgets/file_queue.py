@@ -24,7 +24,11 @@ def _parse_dnd_files(data: str) -> list[str]:
     """解析 tkdnd 拖放数据为文件路径列表。
 
     Windows 路径用 {} 包裹；macOS/Linux 以换行分隔。
+    A-14: 优先使用 tk.splitlist 标准解析，正则作为回退。
     """
+    # 优先尝试标准列表解析（由调用方通过 tk.splitlist 传入已解析列表时直接返回）
+    if isinstance(data, (list, tuple)):
+        return [p for p in data if p]
     matches = re.findall(r"\{([^}]*)\}", data)
     if matches:
         return [m for m in matches if m]
@@ -221,9 +225,16 @@ class FileQueue(ctk.CTkFrame):
             self._empty_hint.configure(text="点击上方按钮添加文件或文件夹")
 
     def _on_dnd_drop(self, event):
-        """处理拖放文件事件。"""
+        """处理拖放文件事件。
+
+        A-14: 优先使用 tk.splitlist 标准列表解析，避免正则丢失路径。
+        """
         if self._on_drop_files:
-            paths = _parse_dnd_files(event.data)
+            try:
+                paths = list(self.tk.splitlist(event.data))
+            except Exception:
+                paths = _parse_dnd_files(event.data)
+            paths = [p for p in paths if p]
             if paths:
                 self._on_drop_files(paths)
 

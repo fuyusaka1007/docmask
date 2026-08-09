@@ -534,7 +534,10 @@ class WorkbenchPage(ctk.CTkFrame):
             self._update_execute_bar()
 
     def _on_drop_files(self, paths: list[str]):
-        """拖放文件/文件夹回调。"""
+        """拖放文件/文件夹回调。
+
+        A-14: 拖入目录统一走 add_folder_async 异步扫描，避免阻塞 UI。
+        """
         if self.state.task_running:
             return
         file_paths = []
@@ -546,11 +549,18 @@ class WorkbenchPage(ctk.CTkFrame):
                 dir_paths.append(p)
         if file_paths:
             self.controller.add_files(file_paths)
-        for dir_path in dir_paths:
-            self.controller.add_folder(dir_path)
-        if file_paths or dir_paths:
             self._file_queue.refresh(self.state.files, self.state.task_running)
             self._update_execute_bar()
+        if dir_paths:
+            self._exec_info.configure(text="正在后台扫描目录...")
+            for dir_path in dir_paths:
+                self.controller.add_folder_async(
+                    dir_path,
+                    on_complete=self._on_folder_scan_complete,
+                    on_progress=lambda count, _path: self._exec_info.configure(
+                        text=f"正在后台扫描目录... 已检查 {count} 个文件"
+                    ),
+                )
 
     def _on_output_mode_change(self):
         is_custom = self._output_var.get() == "custom"

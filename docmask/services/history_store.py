@@ -52,6 +52,50 @@ class HistoryStore:
         if self.count() > self.MAX_ENTRIES:
             self._trim_to_max()
 
+    def append_many(self, entries: list[HistoryEntry]) -> None:
+        """A-09: 批量追加记录。
+
+        一次序列化、一次写入、一次 fsync，避免逐条 append 的 O(n²) 行为。
+        超过上限时一次性裁剪。
+        """
+        if not entries:
+            return
+        new_lines = [
+            json.dumps(asdict(e), ensure_ascii=False) + "\n" for e in entries
+        ]
+
+        # 预估总条数，决定是否需要裁剪
+        existing_count = self.count()
+        total = existing_count + len(entries)
+
+        if total <= self.MAX_ENTRIES:
+            # 直接追加，一次写入 + 一次 fsync
+            with open(self._path, "a", encoding="utf-8") as f:
+                f.writelines(new_lines)
+                f.flush()
+                os.fsync(f.fileno())
+        else:
+            # 需要裁剪：读取现有记录 + 新记录，保留最近 MAX_ENTRIES 条
+            existing = self._read_all()
+            combined = existing + entries
+            keep = combined[len(combined) - self.MAX_ENTRIES:]
+            tmp_fd, tmp_name = tempfile.mkstemp(
+                prefix=".history.", suffix=".tmp", dir=str(self._path.parent)
+            )
+            try:
+                with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+                    for entry in keep:
+                        f.write(json.dumps(asdict(entry), ensure_ascii=False) + "\n")
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_name, self._path)
+            except Exception:
+                try:
+                    os.unlink(tmp_name)
+                except OSError:
+                    pass
+                raise
+
     def query(self, limit: int = 100, offset: int = 0) -> list[HistoryEntry]:
         """查询历史记录（按时间倒序，跳过 offset 条，返回最近 limit 条）。"""
         entries = self._read_all()

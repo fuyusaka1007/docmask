@@ -1,5 +1,6 @@
 """TXT 文件读写与脱敏/恢复"""
 import logging
+import os
 from typing import Optional
 
 from docmask.core.masker import Masker, MaskConflictError
@@ -16,6 +17,21 @@ from docmask.handlers.base import (
 
 logger = logging.getLogger(__name__)
 
+# A-11: TXT 文件大小上限（字节），超过时拒绝处理。
+_MAX_TXT_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+
+
+class TxtFileTooLargeError(Exception):
+    """A-11: TXT 文件超过大小上限，拒绝处理。"""
+
+    def __init__(self, file_size: int, limit: int):
+        self.file_size = file_size
+        self.limit = limit
+        super().__init__(
+            f"文件大小 {file_size / 1024 / 1024:.1f} MB 超过上限 "
+            f"{limit / 1024 / 1024:.0f} MB，请拆分文件后重试。"
+        )
+
 
 class TxtHandler:
     """TXT 文件读写与脱敏/恢复"""
@@ -25,6 +41,10 @@ class TxtHandler:
 
         使用 universal newlines 模式，CRLF/CR 统一归一化为 LF。
         """
+        # A-11: 文件大小检查
+        file_size = os.path.getsize(filepath)
+        if file_size > _MAX_TXT_FILE_SIZE:
+            raise TxtFileTooLargeError(file_size, _MAX_TXT_FILE_SIZE)
         encoding = detect_encoding(filepath)
         logger.info(f"检测到文件编码: {encoding} ({filepath})")
         with open(filepath, "r", encoding=encoding) as f:

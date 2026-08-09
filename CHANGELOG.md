@@ -1,29 +1,46 @@
 # Changelog
 
-## Unreleased
+## v0.1.0-beta.4 (2026-08-09)
 
-基于《代码二次审计-20260805.md》修复 7 个审计缺陷（2 P0 + 5 P1），本版不作为 release 发布。
+基于《代码完整审计报告-20260809.md》修复全部 20 项审计发现（1 P0 / 11 P1 / 7 P2 / 1 P3），270 个测试通过。
 
 ### 修复（P0）
 
-- **支持部件隐藏元数据泄漏（A-01）**：普通 Word XML 仅扫描 `w:t`/`w:delText`，导致域代码 `w:instrText`、内容控件标签 `w:sdtPr/w:tag/@w:val`、书签名称 `w:bookmarkStart/@w:name`、图片替代文本 `wp:docPr/@descr`/`@title` 静默残留。新增统一"扩展隐私表面"选择器，采集/脱敏/恢复/保存后校验共用；书签名称脱敏词不符合 XML Name 规范时 fail closed（阻止输出）；外部关系目标含敏感内容时默认阻止输出（兼容模式才告警）
-- **正则灾难性回溯无时间边界（A-02）**：正则执行无超时、不可取消，可长期阻塞工作线程。引入 `regex` 模块（per-call timeout 2 秒），超时抛出 `RegexBudgetExceededError` 并报告密码本行号（不回显敏感内容）；正则输入长度限制 256KB；无 `regex` 模块时自动降级为输入长度限制
+- **超长文本正则静默漏脱敏（A-01）**：大于 256 KiB 的 TXT 文件截断后正则规则仅匹配前半部分，尾部敏感信息直接泄漏但任务仍显示成功。改为 fail closed：含正则规则且文本超限时抛出 `RegexBudgetExceededError`，精确规则仍对全文匹配；TXT 处理器捕获异常后标记文件失败，不生成输出
+- **pip install 不安装 regex，ReDoS 保护静默降级（A-03）**：`setup.py` install_requires 缺 `regex`；`codebook.py` 导入失败时静默回退标准库 `re`（无 per-call timeout）。`setup.py` 新增 `regex>=2024.0`；无 `regex` 模块时含正则规则的密码本在 `_parse()` 阶段抛出 `CodebookError`，明确拒绝加载
 
 ### 修复（P1）
 
-- **不支持部件跨节点告警漏检（A-03）**：敏感原文被拆分到相邻 XML 文本节点时漏检。新增有界滑动窗口聚合扫描（窗口上限 4），跨节点命中时按部件告警
-- **无硬链接文件系统无安全回退（A-04）**：仅 `os.link` 提交导致 FAT/部分 SMB 目录无法输出。新增 `O_CREAT|O_EXCL + 复制 + fsync` 安全回退，绝不使用无条件 `os.replace`（保证不覆盖用户文件）
-- **持久化设置缺少值类型校验（A-05）**：合法 JSON 可导致 UI 启动崩溃。`SettingsModel.load` 按字段校验（theme/scale/log_level 枚举白名单、布尔严格校验、format_filters 格式列表），坏字段回退默认值并记 warning；`save` 改为临时文件 + 原子提交
-- **UI 回调异常阻断事件队列（A-06）**：单回调异常中断排空循环。每个回调独立 `try/except Exception` 并记录日志，`BaseException` 不吞
-- **CLI 中断返回成功码（A-07）**：`KeyboardInterrupt` 后仍返回 0。mask/restore 记录 `interrupted=True`，摘要区分成功/失败/未处理，中断返回 130
+- **DOCX 残留扫描绕过正则超时保护（A-04）**：`pattern.search(text)` 无 timeout。新增 `codebook.safe_search()` 统一安全搜索 API，per-call timeout 2 秒；所有 DOCX 扫描阶段的正则搜索统一走安全路径
+- **DOCX 冲突预检与实际替换采用不同文本坐标（A-05）**：`_collect_all_text()` 逐节点收集，`_mask_direct_runs()` 连续节点拼接处理，跨 Run 脱敏词漏检。预检改为复用 `_iter_direct_text_groups()` 生成连续文本组
+- **DOCX 保存后残留校验"部分文本已改变"时漏报（A-06）**：仅检查文本值是否完全等于快照中的值，部分替换后跳过。改为逐节点核对：记录每个文本节点身份，保存后检查部分替换的节点是否仍包含规则原文
+- **密码本存在 ERROR 时仍保存并生成版本（A-02）**：`update_rules()` 返回错误后无条件 `lib.save()`。先校验后提交：含 ERROR 时禁止保存，`codebook_library.save()` 写入前执行独立临时 Codebook 解析 + validate
+- **密码本编辑器静默丢弃未填完整的规则行（A-07）**：空字段行被 `continue` 跳过，保存后永久消失。改为返回所有行，空字段行标记为 ERROR 并阻止保存
+- **密码本库保存跨四文件无事务（A-08）**：依次写 current.txt → 版本 → meta.json → index.json，非原子。引入 commit marker 事务：版本快照先写入，commit marker 记录目标 meta，依次更新各文件后删除 marker；启动时检测并恢复中断的保存
+- **历史记录批量写入在 Tk 主线程执行，O(n²)（A-09）**：逐条 `append()` 每条 flush+fsync+重新计数。新增 `append_many()` 批量写入（一次序列化、一次写入、一次 fsync）；`record_history()` 收集后通过后台线程执行
+- **停止任务无法及时停止 DOC 转换（A-10）**：`subprocess.run(timeout=120)` 阻塞无取消轮询。改为 `subprocess.Popen` + 短周期 `communicate(timeout=0.5)` 循环，收到取消令牌后终止进程
+- **大型 TXT/大量匹配高内存占用（A-11）**：一次性读取整个文件、收集所有候选后统一排序。新增文件大小预算（50 MB）和候选数量上限（200,000），超限时拒绝处理
+- **任务运行期间全局状态仍可变，历史可能记录错误密码本（A-12）**：引擎取一次密码本，历史记录重新读取当前 state。引入不可变 `TaskContext`（frozen dataclass）快照，任务期间不依赖可变全局状态
+
+### 修复（P2）
+
+- **DOCX 恢复没有保存后残留验证（A-17）**：恢复保存后直接提交无校验。新增对称恢复校验：检查精确规则脱敏词是否仍残留
+- **三/四节点拆分扫描实际失效（A-13）**：窗口 > 2 时要求拼接结果存在于 `original_texts`（只含逐节点文本），导致 3/4 节点窗口为死代码。移除该条件，直接对相邻节点窗口执行规则检测
+- **文件拖放解析丢文件，拖入目录阻塞 UI（A-14）**：正则解析 DnD 数据花括号匹配时丢弃无空格路径；拖入目录同步扫描。改为优先使用 `tk.splitlist` 标准解析；拖入目录统一走 `add_folder_async()` 异步扫描
+- **GUI 格式过滤器只影响目录扫描（A-15）**：`add_files()` 不检查 `format_filters`。新增统一 `_is_format_allowed()` 函数，手动选择/拖放的文件也检查格式过滤器
+- **CLI 空输入返回成功码 0（A-16）**：未找到文件时返回 0。改为默认返回 2；新增 `--allow-empty` 参数显式允许空任务成功；`collect_files()` 不再丢弃访问错误
+- **结果与历史对停止/冲突信息展示不完整（A-18）**：结果页未单独统计 STOPPED；历史只保存 `error_message` 不保存 `conflict_details`。结果页增加"已停止"统计卡片；历史记录 error 字段使用 `error_message or conflict_details`；历史页面停止详情正确显示
+- **密码本库索引缺少结构与路径校验（A-19）**：JSON 解析失败静默返回空库；`_codebook_dir()` 直接拼接 ID；`delete()` 执行 `shutil.rmtree()`。新增 ID 正则校验（`^cb-[0-9a-f]{8}$`）、版本 ID 校验、路径 `resolve()` 越界检查；索引损坏时从子目录重建
+
+### 修复（P3）
+
+- **UI 回调异常隔离器本身可能再次抛异常（A-20）**：`callback.__name__` 对 partial/callable 对象可能抛 `AttributeError`。改为 `getattr(callback, "__name__", repr(callback))`
 
 ### 变更
 
-- `requirements.txt` 新增 `regex>=2024.0`（ReDoS 防护，推荐依赖）
-- `docx_handler.py` 新增扩展隐私表面常量与 mask/restore/校验方法
-- `file_utils.py` 新增 `_commit_no_replace` / `_fsync_dir` 安全提交
-- `state.py` 新增字段级值校验与原子保存
-- 测试新增 13 个回归用例（A-01~A-07 全覆盖）
+- 版本号升级至 `0.1.0-beta.4`
+- `setup.py` install_requires 新增 `regex>=2024.0`
+- 测试新增 52 个回归用例（A-01~A-20 全覆盖），总计 270 个测试通过
 
 ## v0.1.0-beta.3 (2026-08-08)
 

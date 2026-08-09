@@ -324,6 +324,8 @@ class HistoryPage(ctk.CTkFrame):
             title = "失败详情"
         elif entry.status == "conflict":
             title = "冲突详情"
+        elif entry.status == "stopped":
+            title = "停止详情"
         else:
             title = "详情"
         text = entry.error or "无详细信息"

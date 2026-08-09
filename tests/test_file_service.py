@@ -18,7 +18,7 @@ class TestCollectFiles:
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as f:
             tmp = f.name
         try:
-            result = collect_files(tmp, ["txt"])
+            result, _ = collect_files(tmp, ["txt"])
             assert result == [tmp]
         finally:
             os.remove(tmp)
@@ -28,7 +28,7 @@ class TestCollectFiles:
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             tmp = f.name
         try:
-            result = collect_files(tmp, ["txt", "docx"])
+            result, _ = collect_files(tmp, ["txt", "docx"])
             assert result == []
         finally:
             os.remove(tmp)
@@ -38,7 +38,7 @@ class TestCollectFiles:
         with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as f:
             tmp = f.name
         try:
-            result = collect_files(tmp)
+            result, _ = collect_files(tmp)
             assert result == [tmp]
         finally:
             os.remove(tmp)
@@ -55,7 +55,7 @@ class TestCollectFiles:
             (sub / "c.txt").touch()
             (sub / "d.pdf").touch()
 
-            result = collect_files(tmpdir, ["txt", "docx"], recursive=True)
+            result, _ = collect_files(tmpdir, ["txt", "docx"], recursive=True)
             # 应找到 a.txt, b.docx, subdir/c.txt
             names = sorted(Path(p).name for p in result)
             assert names == ["a.txt", "b.docx", "c.txt"]
@@ -68,14 +68,14 @@ class TestCollectFiles:
             (Path(tmpdir) / "a.txt").touch()
             (sub / "c.txt").touch()
 
-            result = collect_files(tmpdir, ["txt"], recursive=False)
+            result, _ = collect_files(tmpdir, ["txt"], recursive=False)
             names = [Path(p).name for p in result]
             assert names == ["a.txt"]
 
     def test_directory_empty(self):
         """空目录"""
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = collect_files(tmpdir, ["txt"])
+            result, _ = collect_files(tmpdir, ["txt"])
             assert result == []
 
     def test_format_normalization(self):
@@ -84,14 +84,14 @@ class TestCollectFiles:
             tmp = f.name
         try:
             # 带点号、大写都应正常匹配
-            result = collect_files(tmp, [".TXT", "TXT"])
+            result, _ = collect_files(tmp, [".TXT", "TXT"])
             assert result == [tmp]
         finally:
             os.remove(tmp)
 
     def test_nonexistent_path(self):
         """不存在的路径返回空列表"""
-        result = collect_files("/nonexistent/path/file.txt", ["txt"])
+        result, _ = collect_files("/nonexistent/path/file.txt", ["txt"])
         assert result == []
 
     def test_results_sorted(self):
@@ -101,7 +101,7 @@ class TestCollectFiles:
             (Path(tmpdir) / "a.txt").touch()
             (Path(tmpdir) / "b.txt").touch()
 
-            result = collect_files(tmpdir, ["txt"])
+            result, _ = collect_files(tmpdir, ["txt"])
             names = [Path(p).name for p in result]
             assert names == ["a.txt", "b.txt", "c.txt"]
 

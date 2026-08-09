@@ -169,6 +169,10 @@ class ResultsPage(ctk.CTkFrame):
         self._card_fail = SummaryCard(stats_frame, "冲突/失败", "0", ERROR)
         self._card_fail.pack(side="left", fill="x", expand=True, padx=(0, S_3))
 
+        # A-18: 增加已停止统计卡片
+        self._card_stopped = SummaryCard(stats_frame, "已停止", "0", FG_MUTED)
+        self._card_stopped.pack(side="left", fill="x", expand=True, padx=(0, S_3))
+
         self._card_replacements = SummaryCard(stats_frame, "替换总数", "0", PRIMARY)
         self._card_replacements.pack(side="left", fill="x", expand=True)
 
@@ -218,6 +222,7 @@ class ResultsPage(ctk.CTkFrame):
         self._card_total.set_value("0")
         self._card_success.set_value("0")
         self._card_fail.set_value("0")
+        self._card_stopped.set_value("0")
         self._card_replacements.set_value("0")
 
         if not files:
@@ -233,12 +238,14 @@ class ResultsPage(ctk.CTkFrame):
             total = len(files)
             success = sum(1 for f in files if f.status == FileStatus.DONE)
             failed = sum(1 for f in files if f.status in (FileStatus.FAILED, FileStatus.CONFLICT))
+            stopped = sum(1 for f in files if f.status == FileStatus.STOPPED)
             replacements = sum(f.replacements for f in files)
 
             # 更新统计卡片
             self._card_total.set_value(str(total))
             self._card_success.set_value(str(success))
             self._card_fail.set_value(str(failed))
+            self._card_stopped.set_value(str(stopped))
             self._card_replacements.set_value(str(replacements))
 
             # 文件行

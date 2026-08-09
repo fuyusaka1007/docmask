@@ -59,7 +59,7 @@ def test_doc_mask_restore_outputs_valid_docx_and_cleans_temp_dir(tmp_path, monke
     conversion_dirs = []
     conversion_source = {"path": source_docx}
 
-    def fake_convert(_input_path, temp_dir):
+    def fake_convert(_input_path, temp_dir, _cancel_token=None):
         conversion_dirs.append(Path(temp_dir))
         converted = Path(temp_dir) / "source.docx"
         shutil.copy2(conversion_source["path"], converted)
@@ -148,19 +148,34 @@ def test_libreoffice_uses_temporary_profile_and_cleans_it(tmp_path, monkeypatch)
 
     monkeypatch.setattr(handler, "_find_libreoffice_command", lambda: "soffice.com")
 
-    def fake_run(args, **_kwargs):
-        profile_arg = next(
-            arg for arg in args if arg.startswith("-env:UserInstallation=")
-        )
-        profile_uri = profile_arg.split("=", 1)[1]
-        parsed = urlparse(profile_uri)
-        profile_path = Path(unquote(parsed.path))
-        observed_profile["path"] = profile_path
-        assert profile_path.is_dir()
-        shutil.copy2(source_docx, output_path)
-        return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+    class FakePopen:
+        """A-10: 模拟 Popen + poll 行为。"""
 
-    monkeypatch.setattr("docmask.handlers.doc_handler.subprocess.run", fake_run)
+        def __init__(self, args, **_kwargs):
+            self.returncode = 0
+            profile_arg = next(
+                arg for arg in args if arg.startswith("-env:UserInstallation=")
+            )
+            profile_uri = profile_arg.split("=", 1)[1]
+            parsed = urlparse(profile_uri)
+            profile_path = Path(unquote(parsed.path))
+            observed_profile["path"] = profile_path
+            assert profile_path.is_dir()
+            shutil.copy2(source_docx, output_path)
+
+        def communicate(self, timeout=None):
+            return ("", "")
+
+        def poll(self):
+            return self.returncode
+
+        def terminate(self):
+            pass
+
+        def kill(self):
+            pass
+
+    monkeypatch.setattr("docmask.handlers.doc_handler.subprocess.Popen", FakePopen)
 
     converted = handler._try_libreoffice_convert(str(legacy_doc), output_path)
 

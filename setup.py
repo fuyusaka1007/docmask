@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="docmask",
-    version="0.1.0-beta.2",
+    version="0.1.0-beta.4",
     description="文档脱敏工具 - 离线可逆的文档敏感信息替换工具",
     packages=find_packages(),
     python_requires=">=3.10",
@@ -11,6 +11,7 @@ setup(
         "python-docx>=1.0",
         "chardet>=5.0",
         "lxml>=4.9",
+        "regex>=2024.0",
     ],
     extras_require={
         "ui": [

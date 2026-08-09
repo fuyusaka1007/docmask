@@ -90,10 +90,12 @@ def cmd_mask(args) -> int:
         print(f"错误: 输入文件/目录未找到：{input_path}")
         return 1
 
-    files = collect_files(input_path, formats)
+    files, scan_errors = collect_files(input_path, formats)
+    for err in scan_errors:
+        print(f"[WARN] 目录访问错误: {err}")
     if not files:
         print(f"未找到可处理的文件（格式: {', '.join(formats)}）")
-        return 0
+        return 0 if args.allow_empty else 2
 
     masker = Masker(cb)
     success_count = 0
@@ -185,10 +187,12 @@ def cmd_restore(args) -> int:
         print(f"错误: 输入文件/目录未找到：{input_path}")
         return 1
 
-    files = collect_files(input_path, formats)
+    files, scan_errors = collect_files(input_path, formats)
+    for err in scan_errors:
+        print(f"[WARN] 目录访问错误: {err}")
     if not files:
         print(f"未找到可处理的文件（格式: {', '.join(formats)}）")
-        return 0
+        return 0 if args.allow_empty else 2
 
     restorer = Restorer(cb)
     success_count = 0
@@ -285,6 +289,10 @@ def main() -> None:
     mask_parser.add_argument(
         "--report", "-r", action="store_true", help="输出脱敏覆盖率报告"
     )
+    mask_parser.add_argument(
+        "--allow-empty", action="store_true",
+        help="未找到文件时返回成功码 0（默认返回 2）",
+    )
 
     # restore 子命令
     restore_parser = subparsers.add_parser("restore", help="恢复脱敏文档")
@@ -300,6 +308,10 @@ def main() -> None:
     )
     restore_parser.add_argument(
         "--verify", action="store_true", help=argparse.SUPPRESS
+    )
+    restore_parser.add_argument(
+        "--allow-empty", action="store_true",
+        help="未找到文件时返回成功码 0（默认返回 2）",
     )
 
     args = parser.parse_args()

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-DocMask v0.1.0-beta.1 Windows 打包脚本
+DocMask v0.1.0-beta.4 Windows 打包脚本
 在 Windows 上运行此脚本，生成与 macOS 版本一致的发行包。
 
 用法:

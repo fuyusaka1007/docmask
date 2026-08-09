@@ -261,6 +261,33 @@ class TestUpdateRules:
         messages = cb.update_rules(new_rules)
         assert any("空字符串" in m for m in messages)
 
+    def test_update_incomplete_rule_returns_error(self, tmp_path):
+        """A-07: 未填完整的规则行（原文为空）应返回 ERROR，而非被静默丢弃。"""
+        path = tmp_path / "cb.txt"
+        path.write_text("张三==>李四\n", encoding="utf-8")
+        cb = Codebook(str(path))
+        cb.load()
+
+        new_rules = [
+            CodebookRule(rule_type="exact", original="王五", replacement="赵六"),
+            CodebookRule(rule_type="exact", original="", replacement="未填原文"),
+        ]
+        messages = cb.update_rules(new_rules)
+        assert any(m.startswith("ERROR") for m in messages)
+
+    def test_update_missing_replacement_returns_error(self, tmp_path):
+        """A-07: 未填脱敏词的规则行应返回 ERROR。"""
+        path = tmp_path / "cb.txt"
+        path.write_text("张三==>李四\n", encoding="utf-8")
+        cb = Codebook(str(path))
+        cb.load()
+
+        new_rules = [
+            CodebookRule(rule_type="exact", original="王五", replacement=""),
+        ]
+        messages = cb.update_rules(new_rules)
+        assert any(m.startswith("ERROR") for m in messages)
+
 
 # ======================== save ========================
 

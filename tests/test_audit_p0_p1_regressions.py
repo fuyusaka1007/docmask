@@ -298,6 +298,7 @@ def test_results_empty_state_resets_all_cards(monkeypatch):
         _card_total=Card(),
         _card_success=Card(),
         _card_fail=Card(),
+        _card_stopped=Card(),
         _card_replacements=Card(),
     )
     ResultsPage._refresh(page)
@@ -305,6 +306,7 @@ def test_results_empty_state_resets_all_cards(monkeypatch):
         page._card_total.value,
         page._card_success.value,
         page._card_fail.value,
+        page._card_stopped.value,
         page._card_replacements.value,
     } == {"0"}
 
@@ -616,7 +618,7 @@ def test_cli_mask_interrupt_returns_130(tmp_path, monkeypatch):
 
     args = SimpleNamespace(
         input=str(source), codebook=str(codebook), output=None,
-        format=None, report=False,
+        format=None, report=False, allow_empty=False,
     )
     rc = cli_module.cmd_mask(args)
     assert rc == 130
@@ -637,7 +639,7 @@ def test_cli_restore_interrupt_returns_130(tmp_path, monkeypatch):
 
     args = SimpleNamespace(
         input=str(source), codebook=str(codebook), output=None,
-        format=None,
+        format=None, allow_empty=False,
     )
     rc = cli_module.cmd_restore(args)
     assert rc == 130

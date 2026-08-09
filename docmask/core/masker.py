@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 # 正则规则仅匹配前 _MAX_REGEX_INPUT_LENGTH 字符。无 regex 模块时这是主要 ReDoS 防线。
 _MAX_REGEX_INPUT_LENGTH = 256 * 1024  # 256 KB
 
+# A-11: 单次 mask_text 调用的候选匹配数量上限。
+# 超过此值时拒绝处理，防止高内存占用和性能退化。
+_MAX_CANDIDATES = 200_000
+
 # regex 模块的 finditer 在超时时抛出内置 TimeoutError；无 regex 模块时占位异常永远不会触发。
 if _HAS_REGEX_MODULE:
     _REGEX_TIMEOUT_ERROR = TimeoutError
@@ -29,6 +33,31 @@ class RegexBudgetExceededError(Exception):
             msg += f"，密码本第 {line_number} 行"
         msg += "），已中止该文件处理"
         super().__init__(msg)
+
+
+class TextTooLongError(Exception):
+    """文本超过正则安全处理上限，拒绝处理以防止静默漏脱敏。"""
+
+    def __init__(self, text_length: int, limit: int):
+        self.text_length = text_length
+        self.limit = limit
+        super().__init__(
+            f"文本长度 {text_length} 超过正则安全处理上限 {limit} 字节，"
+            "含正则规则的密码本无法安全处理此文件。"
+            "请拆分文件后重试，或移除密码本中的正则规则。"
+        )
+
+
+class CandidateBudgetExceededError(Exception):
+    """A-11: 候选匹配数量超过预算上限，拒绝处理以防止高内存占用。"""
+
+    def __init__(self, candidate_count: int, limit: int):
+        self.candidate_count = candidate_count
+        self.limit = limit
+        super().__init__(
+            f"候选匹配数量 {candidate_count} 超过上限 {limit}，"
+            "文件可能包含过多敏感内容。请缩小密码本规则范围或拆分文件后重试。"
+        )
 
 
 class MaskConflictError(Exception):
@@ -112,14 +141,16 @@ class Masker:
                     )
 
         for rule_index, (pattern, replacement) in enumerate(self.regex_rules):
-            # A-02: 限制正则输入长度，防止超长文本加剧回溯
-            regex_text = text if len(text) <= _MAX_REGEX_INPUT_LENGTH else text[:_MAX_REGEX_INPUT_LENGTH]
+            # A-01: 文本超过安全上限时拒绝处理（fail closed），防止截断导致静默漏脱敏。
+            # 精确规则无 ReDoS 风险，仍对全文匹配（上方已处理）。
+            if len(text) > _MAX_REGEX_INPUT_LENGTH:
+                raise TextTooLongError(len(text), _MAX_REGEX_INPUT_LENGTH)
             try:
                 # regex 模块支持 per-call timeout；re 模块不支持
                 if _HAS_REGEX_MODULE:
-                    match_iter = pattern.finditer(regex_text, timeout=_REGEX_TIMEOUT_SECONDS)
+                    match_iter = pattern.finditer(text, timeout=_REGEX_TIMEOUT_SECONDS)
                 else:
-                    match_iter = pattern.finditer(regex_text)
+                    match_iter = pattern.finditer(text)
                 # finditer 返回惰性迭代器，超时在迭代期间抛出，需包裹整个循环
                 for match in match_iter:
                     # Codebook 已拒绝空匹配；这里保留防御性检查。
@@ -137,6 +168,9 @@ class Masker:
         candidates.sort(
             key=lambda item: (item[0], -(item[1] - item[0]), item[2], item[3])
         )
+        # A-11: 候选数量超过预算时拒绝处理
+        if len(candidates) > _MAX_CANDIDATES:
+            raise CandidateBudgetExceededError(len(candidates), _MAX_CANDIDATES)
         result_parts: list[str] = []
         cursor = 0
         total_count = 0

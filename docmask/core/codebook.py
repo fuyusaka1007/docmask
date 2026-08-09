@@ -4,8 +4,10 @@ import re
 from dataclasses import dataclass
 
 # A-02 ReDoS 防护：优先使用支持 timeout 的 regex 模块，回退到标准 re。
-# 有 regex 模块时，每条正则在编译时绑定超时，finditer/search 自动受限；
+# 有 regex 模块时，finditer/search 调用时传入 per-call timeout；
 # 无 regex 模块时，仅靠输入长度限制提供部分防护。
+# A-03: 无 regex 模块时，含正则规则的密码本拒绝加载（fail closed），
+# 不再静默降级为标准库 re（标准库 re 无 per-call timeout，无法防止 ReDoS）。
 try:
     import regex as _re_mod
     _HAS_REGEX_MODULE = True
@@ -131,7 +133,15 @@ class Codebook:
                         f"密码本第 {line_num} 行重复定义原文；首次定义在第 "
                         f"{seen_rules[rule_key]} 行：{rule_key}"
                     )
+                # A-03: 无 regex 模块时拒绝加载正则规则（fail closed）。
+                if not _HAS_REGEX_MODULE:
+                    raise CodebookError(
+                        f"密码本第 {line_num} 行包含正则规则，但未安装 regex 模块。"
+                        "标准库 re 不支持 per-call timeout，无法防止 ReDoS。"
+                        "请运行 pip install regex 安装后重试。"
+                    )
                 try:
+                    # A-04: timeout 在 safe_search/finditer 调用时按 per-call 传递。
                     compiled = _re_mod.compile(pattern_str)
                 except _re_mod.error as e:
                     raise CodebookError(
@@ -249,7 +259,7 @@ class Codebook:
                 messages.append(
                     f"ERROR: 文档中已存在脱敏词（出现 {count} 次），无法区分原文与脱敏结果"
                 )
-        if any(pattern.search(text) for pattern, _ in self.regex_rules):
+        if self.safe_search(text):
             messages.append(
                 "WARNING: 文档命中了正则规则；正则规则不保存原始匹配值，不能保证 restore 还原"
             )
@@ -274,6 +284,25 @@ class Codebook:
     def get_regex_line_numbers(self) -> list[int]:
         """获取正则规则对应的密码本行号列表（用于 ReDoS 超时错误报告）。"""
         return list(self._regex_line_numbers)
+
+    def safe_search(self, text: str) -> bool:
+        """A-04: 统一安全搜索 API，检查文本是否命中任何正则规则。
+
+        所有正则搜索必须走此方法，确保受 per-call timeout 保护。
+        返回 True 表示命中至少一条正则规则。
+        """
+        for pattern, _ in self.regex_rules:
+            try:
+                if _HAS_REGEX_MODULE:
+                    result = pattern.search(text, timeout=_REGEX_TIMEOUT_SECONDS)
+                else:
+                    result = pattern.search(text)
+                if result is not None:
+                    return True
+            except Exception:
+                # 超时等异常按"可能含敏感内容"处理（fail safe）
+                return True
+        return False
 
     # ======================== 编辑器支持 ========================
 

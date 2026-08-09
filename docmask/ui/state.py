@@ -96,6 +96,25 @@ class CodebookState:
         return self.regex_count > 0
 
 
+@dataclass(frozen=True)
+class TaskContext:
+    """A-12: 任务执行上下文的不可变快照。
+
+    在任务开始时创建，整个任务执行期间使用此快照，
+    避免 UI 修改全局状态影响正在运行的任务。
+    """
+    mode: Mode
+    codebook: Codebook
+    codebook_name: str
+    codebook_version: str
+    exact_count: int
+    regex_count: int
+    output_same_dir: bool
+    output_dir: Optional[str]
+    generate_report: bool
+    history_enabled: bool
+
+
 @dataclass
 class SettingsModel:
     """持久化用户偏好设置，保存到用户数据目录的 settings.json。"""

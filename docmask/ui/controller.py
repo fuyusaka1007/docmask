@@ -23,7 +23,8 @@ from docmask.utils.file_utils import generate_output_path
 from docmask.config import DESENSITIZED_SUFFIX, RESTORED_SUFFIX
 
 from docmask.ui.state import (
-    AppState, CodebookState, FileItem, FileStatus, Mode, create_file_item,
+    AppState, CodebookState, FileItem, FileStatus, Mode, TaskContext,
+    create_file_item,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ class TaskController:
         self._scan_cancel = threading.Event()
         self._library: Optional[CodebookLibrary] = None
         self._history: Optional[HistoryStore] = None
+        self._task_context: Optional[TaskContext] = None
 
     # ======================== 密码本库 ========================
 
@@ -94,8 +96,11 @@ class TaskController:
 
     def save_codebook_to_library(
         self, codebook_id: str, rules: list[CodebookRule]
-    ) -> tuple[VersionInfo, list[str]]:
-        """保存密码本到库（生成新版本快照）。"""
+    ) -> tuple[Optional[VersionInfo], list[str]]:
+        """保存密码本到库（生成新版本快照）。
+
+        A-02: 含 ERROR 的密码本禁止保存，返回 (None, messages)。
+        """
         lib = self.init_library()
         cb = Codebook.__new__(Codebook)
         cb.filepath = ""
@@ -107,6 +112,10 @@ class TaskController:
         cb._regex_line_numbers = []
         cb._raw_content = ""
         messages = cb.update_rules(rules)
+        # A-02: 存在 ERROR 时不保存，防止无效密码本覆盖当前版本
+        has_error = any(m.startswith("ERROR") for m in messages)
+        if has_error:
+            return None, messages
         version = lib.save(codebook_id, cb)
         return version, messages
 
@@ -164,12 +173,18 @@ class TaskController:
 
     # ======================== 文件队列 ========================
 
+    def _is_format_allowed(self, fmt: str) -> bool:
+        """A-15: 检查文件格式是否在当前格式过滤器中。"""
+        return fmt in self.state.format_filters
+
     def add_files(self, paths: list[str]) -> list[FileItem]:
         """添加文件到队列，返回新增的 FileItem 列表
 
         使用规范化绝对路径去重，覆盖两种场景：
         - 已在队列中的路径（跨多次调用）
         - 同一次调用中重复出现的路径
+
+        A-15: 手动选择/拖放的文件也检查 format_filters，与目录扫描统一。
         """
         added = []
         seen = {os.path.realpath(f.path) for f in self.state.files}
@@ -178,7 +193,7 @@ class TaskController:
             if normalized in seen:
                 continue
             item = create_file_item(p)
-            if item.fmt != "other":
+            if item.fmt != "other" and self._is_format_allowed(item.fmt):
                 self.state.files.append(item)
                 added.append(item)
                 seen.add(normalized)
@@ -288,13 +303,32 @@ class TaskController:
         state = self.state
         total = len(state.files)
         results = list(state.files)  # 快照
+
+        # A-12: 创建不可变任务上下文快照，任务期间不依赖可变全局状态
+        cb_state = state.codebook
+        ctx = TaskContext(
+            mode=state.mode,
+            codebook=cb_state.codebook,
+            codebook_name=cb_state.library_name or (
+                os.path.basename(cb_state.path) if cb_state.path else ""
+            ),
+            codebook_version=cb_state.version or "",
+            exact_count=cb_state.exact_count,
+            regex_count=cb_state.regex_count,
+            output_same_dir=state.output_same_dir,
+            output_dir=state.output_dir,
+            generate_report=state.generate_report,
+            history_enabled=state.history_enabled,
+        )
+        self._task_context = ctx
+
         try:
-            mode = state.mode
+            mode = ctx.mode
             cancel_token = self._cancel_token
             if mode == Mode.MASK:
-                engine = Masker(state.codebook.codebook)
+                engine = Masker(ctx.codebook)
             else:
-                engine = Restorer(state.codebook.codebook)
+                engine = Restorer(ctx.codebook)
 
             for i, item in enumerate(results):
                 if cancel_token and cancel_token.is_cancelled:
@@ -317,7 +351,7 @@ class TaskController:
                         continue
 
                     suffix = DESENSITIZED_SUFFIX if mode == Mode.MASK else RESTORED_SUFFIX
-                    output_dir = None if state.output_same_dir else state.output_dir
+                    output_dir = None if ctx.output_same_dir else ctx.output_dir
                     output_path = generate_output_path(
                         item.path,
                         output_dir=output_dir,
@@ -344,7 +378,7 @@ class TaskController:
                         item.replacements = count
                         item.coverage = (
                             engine.generate_coverage_summary(coverage)
-                            if state.generate_report else None
+                            if ctx.generate_report else None
                         )
                         item.warnings = list(getattr(handler, "last_warnings", []))
                     else:
@@ -404,7 +438,8 @@ class TaskController:
                 callback(*args)
             except Exception:
                 logger.exception(
-                    "UI 回调异常已隔离，继续排空事件队列: %s", callback.__name__
+                    "UI 回调异常已隔离，继续排空事件队列: %s",
+                    getattr(callback, "__name__", repr(callback)),
                 )
             processed += 1
         return processed
@@ -453,22 +488,23 @@ class TaskController:
     def record_history(self, results: list[FileItem]) -> None:
         """任务完成后记录历史（主线程执行）。
 
-        根据 state.history_enabled 决定是否记录。
+        A-09: 收集所有 entries 后通过后台线程调用 append_many()，
+        避免 Tk 主线程逐条写入磁盘导致 UI 冻结。
+        A-12: 使用任务开始时的 TaskContext 快照，不受任务期间 UI 修改影响。
         """
-        if not self.state.history_enabled:
+        ctx = self._task_context
+        if ctx is None or not ctx.history_enabled:
             return
         if self._history is None:
             self._history = HistoryStore()
         from datetime import datetime
         timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        mode = "mask" if self.state.mode == Mode.MASK else "restore"
-        cb_state = self.state.codebook
-        cb_name = cb_state.library_name or (
-            os.path.basename(cb_state.path) if cb_state.path else ""
-        )
-        cb_version = cb_state.version or ""
-        exact_count = cb_state.exact_count
-        regex_count = cb_state.regex_count
+        mode = "mask" if ctx.mode == Mode.MASK else "restore"
+        cb_name = ctx.codebook_name
+        cb_version = ctx.codebook_version
+        exact_count = ctx.exact_count
+        regex_count = ctx.regex_count
+        entries: list[HistoryEntry] = []
         for item in results:
             status_map = {
                 FileStatus.DONE: "done",
@@ -489,12 +525,20 @@ class TaskController:
                 regex_rule_count=regex_count,
                 replacements=item.replacements,
                 status=status,
-                error=item.error_message,
+                # A-18: 冲突详情也写入 error 字段，确保历史页面能展示
+                error=item.error_message or item.conflict_details,
             )
+            entries.append(entry)
+
+        # A-09: 后台线程批量写入，不阻塞 Tk 主线程
+        def _write():
             try:
-                self._history.append(entry)
+                self._history.append_many(entries)
             except Exception:
                 logger.warning("写入历史记录失败", exc_info=True)
+
+        t = threading.Thread(target=_write, daemon=True)
+        t.start()
 
     def query_history(self, limit: int = 100) -> list[HistoryEntry]:
         """查询历史记录。"""

@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 import zipfile
 from pathlib import Path
 from typing import Optional
@@ -17,6 +18,7 @@ from docmask.handlers.docx_handler import DocxHandler
 from docmask.handlers.base import (
     CancelToken,
     ProgressCallback,
+    TaskCancelledError,
     check_cancel,
     report_progress,
 )
@@ -42,7 +44,10 @@ class DocHandler:
         candidate = Path(path)
         return candidate.is_file() and candidate.stat().st_size > 0 and zipfile.is_zipfile(candidate)
 
-    def _convert_to_docx(self, input_path: str, temp_dir: str) -> str:
+    def _convert_to_docx(
+        self, input_path: str, temp_dir: str,
+        cancel_token: Optional[CancelToken] = None,
+    ) -> str:
         """将 .doc 转换为 .docx，并返回转换器实际生成的文件路径。"""
         output_path = Path(temp_dir) / f"{Path(input_path).stem}.docx"
 
@@ -50,7 +55,7 @@ class DocHandler:
         if converted is not None:
             return str(converted)
 
-        converted = self._try_libreoffice_convert(input_path, output_path)
+        converted = self._try_libreoffice_convert(input_path, output_path, cancel_token)
         if converted is not None:
             return str(converted)
 
@@ -152,8 +157,14 @@ class DocHandler:
         except Exception as exc:
             logger.debug("等待 Word 进程退出失败: %s", exc)
 
-    def _try_libreoffice_convert(self, input_path: str, output_path: Path) -> Path | None:
-        """尝试使用 LibreOffice 命令行转换，并返回真实输出路径。"""
+    def _try_libreoffice_convert(
+        self, input_path: str, output_path: Path,
+        cancel_token: Optional[CancelToken] = None,
+    ) -> Path | None:
+        """尝试使用 LibreOffice 命令行转换，并返回真实输出路径。
+
+        A-10: 使用 Popen + 短周期 poll 实现可取消的转换。
+        """
         try:
             command = self._find_libreoffice_command()
             if command is None:
@@ -163,7 +174,7 @@ class DocHandler:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.TemporaryDirectory(prefix="docmask_lo_profile_") as profile_dir:
                 profile_uri = Path(profile_dir).resolve().as_uri()
-                result = subprocess.run(
+                proc = subprocess.Popen(
                     [
                         command,
                         f"-env:UserInstallation={profile_uri}",
@@ -177,20 +188,55 @@ class DocHandler:
                         "--outdir", str(output_path.parent),
                         os.path.abspath(input_path),
                     ],
-                    capture_output=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     text=True,
-                    timeout=120,
                 )
+                stdout = stderr = ""
+                try:
+                    deadline = time.monotonic() + 120
+                    while True:
+                        # A-10: 检查取消令牌
+                        if cancel_token and cancel_token.is_cancelled:
+                            proc.terminate()
+                            try:
+                                proc.communicate(timeout=5)
+                            except subprocess.TimeoutExpired:
+                                proc.kill()
+                                proc.communicate(timeout=5)
+                            raise TaskCancelledError("LibreOffice 转换已被用户取消")
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            proc.kill()
+                            proc.communicate(timeout=5)
+                            logger.warning("LibreOffice 转换超时")
+                            return None
+                        try:
+                            stdout, stderr = proc.communicate(
+                                timeout=min(remaining, 0.5)
+                            )
+                            break
+                        except subprocess.TimeoutExpired:
+                            continue
+                finally:
+                    if proc.poll() is None:
+                        proc.kill()
+                        try:
+                            proc.communicate(timeout=5)
+                        except Exception:
+                            pass
 
             generated = output_path.parent / f"{Path(input_path).stem}.docx"
-            if result.returncode == 0 and self._is_valid_docx(generated):
+            if proc.returncode == 0 and self._is_valid_docx(generated):
                 logger.info("通过 LibreOffice 转换: %s", input_path)
                 return generated
 
-            detail = (result.stderr or result.stdout or "未生成有效 DOCX").strip()
+            detail = (stderr or stdout or "未生成有效 DOCX").strip()
             logger.debug("LibreOffice 转换失败: %s", detail)
         except FileNotFoundError:
             logger.debug("LibreOffice 未安装")
+        except TaskCancelledError:
+            raise
         except subprocess.TimeoutExpired:
             logger.warning("LibreOffice 转换超时")
         except Exception as exc:
@@ -263,7 +309,7 @@ class DocHandler:
             input_path, output_path, DESENSITIZED_SUFFIX,
         )
         with tempfile.TemporaryDirectory(prefix="docmask_doc_") as temp_dir:
-            tmp_docx = self._convert_to_docx(input_path, temp_dir)
+            tmp_docx = self._convert_to_docx(input_path, temp_dir, cancel_token)
             report_progress(progress_callback, 1, total_steps, "文件转换完成")
 
             def _wrapped(inner_current: int, inner_total: int, message: str):
@@ -294,7 +340,7 @@ class DocHandler:
             input_path, output_path, RESTORED_SUFFIX,
         )
         with tempfile.TemporaryDirectory(prefix="docmask_doc_") as temp_dir:
-            tmp_docx = self._convert_to_docx(input_path, temp_dir)
+            tmp_docx = self._convert_to_docx(input_path, temp_dir, cancel_token)
             report_progress(progress_callback, 1, total_steps, "文件转换完成")
 
             def _wrapped(inner_current: int, inner_total: int, message: str):

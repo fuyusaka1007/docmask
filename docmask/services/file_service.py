@@ -16,7 +16,7 @@ def collect_files(
     input_path: str,
     formats: Optional[list[str]] = None,
     recursive: bool = True,
-) -> list[str]:
+) -> tuple[list[str], list[str]]:
     """收集待处理的文件列表
 
     - input_path 为文件时：若格式匹配则返回该文件，否则返回空列表
@@ -28,12 +28,14 @@ def collect_files(
         recursive: 目录模式下是否递归子目录
 
     Returns:
-        排序后的文件路径列表
+        (排序后的文件路径列表, 访问错误列表)
+
+    A-16: 不再丢弃 scan_files() 返回的访问错误，向上传递。
     """
-    files, _skipped, _errors = scan_files(
+    files, _skipped, errors = scan_files(
         input_path, formats=formats, recursive=recursive
     )
-    return files
+    return files, errors
 
 
 def scan_files(
